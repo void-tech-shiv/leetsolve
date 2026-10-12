@@ -1,6 +1,7 @@
+import "@neondatabase/auth-ui/css";
 import "./globals.css";
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "LeetSolve — Daily AI Solver",
@@ -9,10 +10,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body><Providers>{children}</Providers></body>
+    </html>
   );
 }
