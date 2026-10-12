@@ -1,6 +1,9 @@
+import { UserButton } from "@clerk/nextjs";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import CodeViewer from "@/components/CodeViewer";
 import SolveControls from "@/components/SolveControls";
-import { getRecentSolutions, getScheduleSettings, getStreakStats, getTodaySolution } from "@/lib/db";
+import { getRecentSolutions, getStreakStats, getTodaySolution, getUserSettings } from "@/lib/db";
 import { getDailyProblem } from "@/lib/leetcode";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +18,13 @@ function difficultyClass(value = "") {
 }
 
 export default async function Home() {
-  const schedule = await getScheduleSettings().catch(() => ({
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const user = await currentUser();
+  const schedule = await getUserSettings(userId).catch(() => ({
+    userId,
+    leetcodeUsername: null,
     enabled: true,
     time: "20:30",
     timezone: "Asia/Kolkata",
@@ -26,9 +35,9 @@ export default async function Home() {
   const language = schedule.language || process.env.DEFAULT_LANGUAGE || "java";
   const [problem, today, recent, stats] = await Promise.all([
     getDailyProblem().catch(() => null),
-    getTodaySolution(language).catch(() => null),
-    getRecentSolutions(14).catch(() => []),
-    getStreakStats().catch(() => ({ currentStreak: 0, longestStreak: 0, totalSolved: 0 })),
+    getTodaySolution(userId, language).catch(() => null),
+    getRecentSolutions(userId, 14).catch(() => []),
+    getStreakStats(userId, schedule.timezone).catch(() => ({ currentStreak: 0, longestStreak: 0, totalSolved: 0 })),
   ]);
 
   return (
@@ -38,14 +47,20 @@ export default async function Home() {
           <span className="brand-mark">L</span>
           <span>LeetSolve</span>
         </a>
-        <div className="top-status"><span className="live-dot" /> {schedule.enabled ? "Daily schedule enabled" : "Schedule paused"}</div>
+        <div className="account-strip">
+          <div className="top-status"><span className="live-dot" /> {schedule.enabled ? "Daily schedule enabled" : "Schedule paused"}</div>
+          <div className="user-meta">
+            <span>{schedule.leetcodeUsername ? `@${schedule.leetcodeUsername}` : user?.primaryEmailAddress?.emailAddress || "Account"}</span>
+            <UserButton afterSignOutUrl="/sign-in" />
+          </div>
+        </div>
       </header>
 
       <section className="hero-panel">
         <div className="hero-copy">
           <span className="pill">AI DAILY SOLVER</span>
           <h1>Your daily coding problem,<br /><span>handled automatically.</span></h1>
-          <p>LeetSolve finds the daily challenge, generates a solution, checks it, retries when needed, and saves the result to your dashboard.</p>
+          <p>LeetSolve prepares the daily challenge for your account, checks the generated solution, retries when needed, and keeps your personal history separate.</p>
           <div className="hero-actions">
             {problem && <a className="primary-link" href={problem.link} target="_blank" rel="noreferrer">Open today’s problem ↗</a>}
             <span className="subtle-label">{schedule.enabled ? `Daily run: ${schedule.time} · ${schedule.timezone}` : "Automatic schedule is paused"}</span>
@@ -127,18 +142,18 @@ export default async function Home() {
           <article className="panel automation-panel">
             <div className="section-heading compact"><div><span className="eyebrow">PIPELINE</span><h2>Automation</h2></div><span className="healthy">Healthy</span></div>
             <div className="pipeline">
-              <div className="pipe-item"><span>1</span><div><strong>Wait for schedule</strong><small>Cloud workflow checks your local time</small></div></div>
+              <div className="pipe-item"><span>1</span><div><strong>Wait for your schedule</strong><small>Cloud workflow checks each user independently</small></div></div>
               <div className="pipe-line" />
               <div className="pipe-item"><span>2</span><div><strong>Fetch challenge</strong><small>Daily problem metadata</small></div></div>
               <div className="pipe-line" />
               <div className="pipe-item"><span>3</span><div><strong>Generate & verify</strong><small>AI + retry loop</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>4</span><div><strong>Save result</strong><small>Neon PostgreSQL</small></div></div>
+              <div className="pipe-item"><span>4</span><div><strong>Save to your account</strong><small>User-scoped Neon history</small></div></div>
             </div>
           </article>
 
           <article className="panel history-panel">
-            <div className="section-heading compact"><div><span className="eyebrow">RECENT</span><h2>History</h2></div></div>
+            <div className="section-heading compact"><div><span className="eyebrow">RECENT</span><h2>Your history</h2></div></div>
             <div className="history-list">
               {recent.length === 0 ? <p className="muted">No previous runs yet.</p> : recent.map((item) => (
                 <a className="history-row" href={item.problem_url || `https://leetcode.com/problems/${item.slug}/`} target="_blank" rel="noreferrer" key={String(item.id)}>
@@ -154,7 +169,7 @@ export default async function Home() {
 
       <footer>
         <span>LeetSolve</span>
-        <span>Automatic preparation and verification only — no LeetCode account credentials are stored.</span>
+        <span>Each account has isolated settings, schedule and solution history.</span>
       </footer>
     </main>
   );
