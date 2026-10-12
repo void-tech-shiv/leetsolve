@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { createNeonAuth } from "@neondatabase/auth/next/server";
 
 function cookieSecret() {
@@ -8,7 +7,7 @@ function cookieSecret() {
   const seed = process.env.DATABASE_URL;
   if (!seed) throw new Error("DATABASE_URL is required to initialize authentication.");
 
-  return crypto.createHash("sha256").update(`leetsolve-auth-cookie:${seed}`).digest("hex");
+  return `${seed}::leetsolve-auth-cookie-v1`;
 }
 
 export const auth = createNeonAuth({
