@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const authReady = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY);
+  const authReady = Boolean(process.env.NEON_AUTH_BASE_URL && process.env.DATABASE_URL);
   const groqReady = Boolean(process.env.GROQ_API_KEY);
   const databaseReady = Boolean(process.env.DATABASE_URL);
 
