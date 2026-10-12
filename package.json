@@ -1,6 +1,6 @@
 {
   "name": "leetsolve",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,6 +13,7 @@
     "next": "^15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "workflow": "^4.2.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {
