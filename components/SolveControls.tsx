@@ -63,7 +63,7 @@ export default function SolveControls({ defaultLanguage }: { defaultLanguage: st
       .catch(() => undefined);
   }, []);
 
-  function authHeaders() {
+  function authHeaders(): Record<string, string> {
     if (accessKey) window.localStorage.setItem("leetsolve_access_key", accessKey);
     return accessKey ? { "x-leetsolve-key": accessKey } : {};
   }
