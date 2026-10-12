@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { DailyProblem, GeneratedSolution } from "./types";
-import { getAccountSecrets } from "./account-store";
 
 const solutionSchema = z.object({
   language: z.string(),
@@ -15,12 +14,14 @@ function stripFences(value: string) {
 }
 
 async function groqJson(prompt: string) {
-  const { aiKey } = await getAccountSecrets();
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY is not configured.");
   const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${aiKey}`,
+      authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
     },
     body: JSON.stringify({
@@ -33,6 +34,7 @@ async function groqJson(prompt: string) {
       ],
     }),
   });
+
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`Groq request failed (${response.status}): ${body.slice(0, 240)}`);
