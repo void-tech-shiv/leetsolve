@@ -24,6 +24,8 @@ export default async function Home() {
   const schedule = await getUserSettings(userId).catch(() => ({
     userId,
     leetcodeUsername: null,
+    leetcodeConnected: false,
+    leetcodeVerifiedAt: null,
     enabled: true,
     time: "20:30",
     timezone: "Asia/Kolkata",
@@ -47,7 +49,9 @@ export default async function Home() {
           <span>LeetSolve</span>
         </a>
         <div className="account-strip">
-          <div className="top-status"><span className="live-dot" /> {schedule.enabled ? "Daily schedule enabled" : "Schedule paused"}</div>
+          <div className="top-status">
+            <span className="live-dot" /> {schedule.leetcodeConnected ? (schedule.enabled ? "Auto-submit enabled" : "Schedule paused") : "Connect LeetCode"}
+          </div>
           <div className="user-meta">
             <span>{schedule.leetcodeUsername ? `@${schedule.leetcodeUsername}` : session.user.name || session.user.email || "Account"}</span>
             <a className="account-link" href="/auth/sign-out">Sign out</a>
@@ -57,9 +61,9 @@ export default async function Home() {
 
       <section className="hero-panel">
         <div className="hero-copy">
-          <span className="pill">AI DAILY SOLVER</span>
-          <h1>Your daily coding problem,<br /><span>handled automatically.</span></h1>
-          <p>LeetSolve prepares the daily challenge for your account, checks the generated solution, retries when needed, and keeps your personal history separate.</p>
+          <span className="pill">AI DAILY AUTO-SUBMIT</span>
+          <h1>Your daily coding problem,<br /><span>solved and submitted automatically.</span></h1>
+          <p>LeetSolve fetches the daily challenge, generates code, checks it, submits it to your LeetCode account and repairs failed attempts when needed.</p>
           <div className="hero-actions">
             {problem && <a className="primary-link" href={problem.link} target="_blank" rel="noreferrer">Open today’s problem ↗</a>}
             <span className="subtle-label">{schedule.enabled ? `Daily run: ${schedule.time} · ${schedule.timezone}` : "Automatic schedule is paused"}</span>
@@ -71,22 +75,22 @@ export default async function Home() {
           <div className="orbit-core">🔥</div>
           <span className="orbit-chip chip-ai">AI</span>
           <span className="orbit-chip chip-test">TEST</span>
-          <span className="orbit-chip chip-save">SAVE</span>
+          <span className="orbit-chip chip-save">SUBMIT</span>
         </div>
       </section>
 
       <section className="stats-grid">
         <article className="stat-card accent">
           <div className="stat-icon">🔥</div>
-          <div><span>LeetSolve streak</span><strong>{stats.currentStreak}</strong><small>prepared days</small></div>
+          <div><span>LeetSolve streak</span><strong>{stats.currentStreak}</strong><small>accepted days</small></div>
         </article>
         <article className="stat-card">
           <div className="stat-icon">🏆</div>
-          <div><span>Longest run</span><strong>{stats.longestStreak}</strong><small>prepared days</small></div>
+          <div><span>Longest run</span><strong>{stats.longestStreak}</strong><small>accepted days</small></div>
         </article>
         <article className="stat-card">
           <div className="stat-icon">✓</div>
-          <div><span>Total solved</span><strong>{stats.totalSolved}</strong><small>daily runs</small></div>
+          <div><span>Total accepted</span><strong>{stats.totalSolved}</strong><small>daily challenges</small></div>
         </article>
         <article className="stat-card">
           <div className="stat-icon">⚙</div>
@@ -106,12 +110,15 @@ export default async function Home() {
             </div>
 
             <div className="run-summary">
-              <div className={`run-state ${today ? "complete" : "pending"}`}>
-                <span>{today ? "✓" : "○"}</span>
-                <div><strong>{today ? "Solution ready" : "Waiting for today’s run"}</strong><small>{today ? `Saved ${formatDate(today.challenge_date)}` : "Your saved schedule will trigger it automatically"}</small></div>
+              <div className={`run-state ${today?.status === "accepted" ? "complete" : "pending"}`}>
+                <span>{today?.status === "accepted" ? "✓" : "○"}</span>
+                <div>
+                  <strong>{today?.status === "accepted" ? "Accepted on LeetCode" : today ? "Submission finished" : "Waiting for today’s run"}</strong>
+                  <small>{today ? `Saved ${formatDate(today.challenge_date)}` : "Your saved schedule will trigger it automatically"}</small>
+                </div>
               </div>
               <div className="meta-block"><span>Language</span><strong>{today?.language || language}</strong></div>
-              <div className="meta-block"><span>Verification</span><strong>{today?.judge_status || "Not run yet"}</strong></div>
+              <div className="meta-block"><span>LeetCode verdict</span><strong>{today?.submission_status || "Not submitted yet"}</strong></div>
             </div>
 
             {today?.code ? (
@@ -122,14 +129,16 @@ export default async function Home() {
                   <div className="complexity-box">
                     <div><span>Time</span><strong>{today.time_complexity || "—"}</strong></div>
                     <div><span>Space</span><strong>{today.space_complexity || "—"}</strong></div>
+                    {today.runtime && <div><span>Runtime</span><strong>{today.runtime}</strong></div>}
+                    {today.memory && <div><span>Memory</span><strong>{today.memory}</strong></div>}
                   </div>
                 </div>
               </>
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">⌁</div>
-                <h3>No solution saved for today yet</h3>
-                <p>Once your scheduled time arrives, the generated solution will appear here automatically.</p>
+                <h3>No LeetCode submission saved for today yet</h3>
+                <p>Connect your account and wait for your scheduled time, or use “Solve & submit now”.</p>
               </div>
             )}
           </article>
@@ -139,25 +148,27 @@ export default async function Home() {
 
         <aside className="side-column">
           <article className="panel automation-panel">
-            <div className="section-heading compact"><div><span className="eyebrow">PIPELINE</span><h2>Automation</h2></div><span className="healthy">Healthy</span></div>
+            <div className="section-heading compact"><div><span className="eyebrow">PIPELINE</span><h2>Automation</h2></div><span className="healthy">Live</span></div>
             <div className="pipeline">
               <div className="pipe-item"><span>1</span><div><strong>Wait for your schedule</strong><small>Cloud workflow checks each user independently</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>2</span><div><strong>Fetch challenge</strong><small>Daily problem metadata</small></div></div>
+              <div className="pipe-item"><span>2</span><div><strong>Fetch daily challenge</strong><small>Problem statement + required code signature</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>3</span><div><strong>Generate & verify</strong><small>AI + retry loop</small></div></div>
+              <div className="pipe-item"><span>3</span><div><strong>Generate & verify</strong><small>Groq AI + local retry loop</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>4</span><div><strong>Save to your account</strong><small>User-scoped Neon history</small></div></div>
+              <div className="pipe-item"><span>4</span><div><strong>Submit to LeetCode</strong><small>Encrypted session + CSRF credentials</small></div></div>
+              <div className="pipe-line" />
+              <div className="pipe-item"><span>5</span><div><strong>Repair if rejected</strong><small>Verdict feedback → AI → re-submit</small></div></div>
             </div>
           </article>
 
           <article className="panel history-panel">
             <div className="section-heading compact"><div><span className="eyebrow">RECENT</span><h2>Your history</h2></div></div>
             <div className="history-list">
-              {recent.length === 0 ? <p className="muted">No previous runs yet.</p> : recent.map((item) => (
+              {recent.length === 0 ? <p className="muted">No previous submissions yet.</p> : recent.map((item) => (
                 <a className="history-row" href={item.problem_url || `https://leetcode.com/problems/${item.slug}/`} target="_blank" rel="noreferrer" key={String(item.id)}>
-                  <div className="history-check">✓</div>
-                  <div className="history-copy"><strong>{item.title}</strong><span>{formatDate(item.challenge_date)} · {item.language}</span></div>
+                  <div className="history-check">{item.status === "accepted" ? "✓" : "•"}</div>
+                  <div className="history-copy"><strong>{item.title}</strong><span>{formatDate(item.challenge_date)} · {item.language} · {item.submission_status || item.status}</span></div>
                   <span className={difficultyClass(item.difficulty)}>{item.difficulty}</span>
                 </a>
               ))}
@@ -168,7 +179,7 @@ export default async function Home() {
 
       <footer>
         <span>LeetSolve</span>
-        <span>Each account has isolated settings, schedule and solution history.</span>
+        <span>LeetCode credentials are encrypted per user and never returned to the browser after saving.</span>
       </footer>
     </main>
   );
