@@ -1,9 +1,27 @@
 import { generateSolution, repairSolution } from "./ai";
-import { saveSolution } from "./db";
+import { getLeetCodeCredentials, saveSolution } from "./db";
 import { verifySolution } from "./judge";
-import { getDailyProblem } from "./leetcode";
+import { getDailyProblem, submitAndWait } from "./leetcode";
+import type { LeetCodeSubmissionResult } from "./types";
+
+function submissionFailure(result: LeetCodeSubmissionResult) {
+  return [
+    `LeetCode verdict: ${result.statusMessage}`,
+    result.totalCorrect !== undefined && result.totalTestcases !== undefined
+      ? `Passed test cases: ${result.totalCorrect}/${result.totalTestcases}`
+      : "",
+    result.lastTestcase ? `Last testcase: ${result.lastTestcase}` : "",
+    result.expectedOutput ? `Expected output: ${result.expectedOutput}` : "",
+    result.codeOutput ? `Your output: ${result.codeOutput}` : "",
+  ].filter(Boolean).join("\n");
+}
 
 export async function solveDaily(userId: string, language = process.env.DEFAULT_LANGUAGE || "java") {
+  const credentials = await getLeetCodeCredentials(userId);
+  if (!credentials) {
+    throw new Error("Connect your LeetCode account before running the solver.");
+  }
+
   const problem = await getDailyProblem();
   let solution = await generateSolution(problem, language);
   let verification = await verifySolution(solution);
@@ -15,9 +33,28 @@ export async function solveDaily(userId: string, language = process.env.DEFAULT_
     verification = await verifySolution(solution);
   }
 
-  await saveSolution(userId, problem, solution, verification).catch((error) => {
-    console.warn("Solution generated but database save failed:", error);
+  const maxSubmissionAttempts = Math.max(1, Number(process.env.MAX_SUBMISSION_ATTEMPTS || "3"));
+  let submission: LeetCodeSubmissionResult | null = null;
+
+  for (let attempt = 0; attempt < maxSubmissionAttempts; attempt += 1) {
+    submission = await submitAndWait(problem, solution, credentials);
+    if (submission.accepted) break;
+
+    if (attempt < maxSubmissionAttempts - 1) {
+      solution = await repairSolution(problem, language, solution, submissionFailure(submission));
+      verification = await verifySolution(solution);
+
+      if (verification.configured && !verification.passed) {
+        const localFailure = [verification.status, verification.stderr, verification.stdout].filter(Boolean).join("\n");
+        solution = await repairSolution(problem, language, solution, localFailure || "Local verification failed after repair.");
+        verification = await verifySolution(solution);
+      }
+    }
+  }
+
+  await saveSolution(userId, problem, solution, verification, submission).catch((error) => {
+    console.warn("Solution submitted but database save failed:", error instanceof Error ? error.message : "Unknown error");
   });
 
-  return { problem, solution, verification };
+  return { problem, solution, verification, submission };
 }
