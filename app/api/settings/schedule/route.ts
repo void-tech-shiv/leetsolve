@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/server";
 import { getUserSettings, updateUserSettings } from "@/lib/db";
 import { isValidTimezone } from "@/lib/schedule";
+import { ensureSchedulerRunning } from "@/lib/start-scheduler";
 
 const schema = z.object({
   enabled: z.boolean(),
@@ -22,7 +23,12 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    return NextResponse.json(await getUserSettings(userId));
+    const settings = await getUserSettings(userId);
+    if (settings.enabled) {
+      const scheduler = await ensureSchedulerRunning();
+      settings.schedulerRunId = scheduler.runId;
+    }
+    return NextResponse.json(settings);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
@@ -39,7 +45,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Invalid timezone." }, { status: 400 });
     }
 
-    return NextResponse.json(await updateUserSettings(userId, parsed.data));
+    const settings = await updateUserSettings(userId, parsed.data);
+    if (settings.enabled) {
+      const scheduler = await ensureSchedulerRunning();
+      settings.schedulerRunId = scheduler.runId;
+    }
+    return NextResponse.json(settings);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
