@@ -1,0 +1,25 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/leetsolve
+      NEON_AUTH_BASE_URL: https://example.com/auth
+      GROQ_API_KEY: ci-placeholder
+      GROQ_MODEL: llama-3.3-70b-versatile
+      DEFAULT_LANGUAGE: java
+      MAX_REPAIR_ATTEMPTS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
