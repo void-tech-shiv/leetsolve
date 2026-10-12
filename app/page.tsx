@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import CodeViewer from "@/components/CodeViewer";
 import SolveControls from "@/components/SolveControls";
 import { auth } from "@/lib/auth/server";
-import { getRecentSolutions, getStreakStats, getTodaySolution, getUserSettings } from "@/lib/db";
-import { getDailyProblem } from "@/lib/leetcode";
+import { getLeetCodeCredentials, getRecentSolutions, getTodaySolution, getUserSettings } from "@/lib/db";
+import { getDailyProblem, getLeetCodeAccountStats } from "@/lib/leetcode";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +34,17 @@ export default async function Home() {
     schedulerRunId: null,
   }));
   const language = schedule.language || process.env.DEFAULT_LANGUAGE || "java";
-  const [problem, today, recent, stats] = await Promise.all([
+  const credentials = schedule.leetcodeConnected
+    ? await getLeetCodeCredentials(userId).catch(() => null)
+    : null;
+
+  const [problem, today, recent, leetcodeStats] = await Promise.all([
     getDailyProblem().catch(() => null),
     getTodaySolution(userId, language).catch(() => null),
     getRecentSolutions(userId, 14).catch(() => []),
-    getStreakStats(userId, schedule.timezone).catch(() => ({ currentStreak: 0, longestStreak: 0, totalSolved: 0 })),
+    credentials && schedule.leetcodeUsername
+      ? getLeetCodeAccountStats(credentials, schedule.leetcodeUsername).catch(() => null)
+      : Promise.resolve(null),
   ]);
 
   return (
@@ -82,15 +88,27 @@ export default async function Home() {
       <section className="stats-grid">
         <article className="stat-card accent">
           <div className="stat-icon">🔥</div>
-          <div><span>LeetSolve streak</span><strong>{stats.currentStreak}</strong><small>accepted days</small></div>
+          <div>
+            <span>LeetCode streak</span>
+            <strong>{leetcodeStats?.currentStreak ?? "—"}</strong>
+            <small>{leetcodeStats ? "official daily streak" : schedule.leetcodeConnected ? "unable to load account streak" : "connect LeetCode"}</small>
+          </div>
         </article>
         <article className="stat-card">
           <div className="stat-icon">🏆</div>
-          <div><span>Longest run</span><strong>{stats.longestStreak}</strong><small>accepted days</small></div>
+          <div>
+            <span>Max streak</span>
+            <strong>{leetcodeStats?.longestStreak ?? "—"}</strong>
+            <small>{leetcodeStats ? "LeetCode profile calendar" : "real account stat"}</small>
+          </div>
         </article>
         <article className="stat-card">
           <div className="stat-icon">✓</div>
-          <div><span>Total accepted</span><strong>{stats.totalSolved}</strong><small>daily challenges</small></div>
+          <div>
+            <span>Problems solved</span>
+            <strong>{leetcodeStats?.totalSolved ?? "—"}</strong>
+            <small>{leetcodeStats ? `${leetcodeStats.totalActiveDays} active days` : "LeetCode account"}</small>
+          </div>
         </article>
         <article className="stat-card">
           <div className="stat-icon">⚙</div>
