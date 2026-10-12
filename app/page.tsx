@@ -1,8 +1,7 @@
-import { UserButton } from "@clerk/nextjs";
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import CodeViewer from "@/components/CodeViewer";
 import SolveControls from "@/components/SolveControls";
+import { auth } from "@/lib/auth/server";
 import { getRecentSolutions, getStreakStats, getTodaySolution, getUserSettings } from "@/lib/db";
 import { getDailyProblem } from "@/lib/leetcode";
 
@@ -18,10 +17,10 @@ function difficultyClass(value = "") {
 }
 
 export default async function Home() {
-  const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
+  const { data: session } = await auth.getSession();
+  if (!session?.user) redirect("/auth/sign-in");
 
-  const user = await currentUser();
+  const userId = session.user.id;
   const schedule = await getUserSettings(userId).catch(() => ({
     userId,
     leetcodeUsername: null,
@@ -50,8 +49,8 @@ export default async function Home() {
         <div className="account-strip">
           <div className="top-status"><span className="live-dot" /> {schedule.enabled ? "Daily schedule enabled" : "Schedule paused"}</div>
           <div className="user-meta">
-            <span>{schedule.leetcodeUsername ? `@${schedule.leetcodeUsername}` : user?.primaryEmailAddress?.emailAddress || "Account"}</span>
-            <UserButton afterSignOutUrl="/sign-in" />
+            <span>{schedule.leetcodeUsername ? `@${schedule.leetcodeUsername}` : session.user.name || session.user.email || "Account"}</span>
+            <a className="account-link" href="/auth/sign-out">Sign out</a>
           </div>
         </div>
       </header>
