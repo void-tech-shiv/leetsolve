@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import type { DailyProblem, GeneratedSolution, VerificationResult } from "./types";
+import type { ScheduleSettings } from "./schedule";
 
 export type SolutionRow = {
   id: number | string;
@@ -24,9 +25,24 @@ export type StreakStats = {
   totalSolved: number;
 };
 
+type SettingsRow = {
+  schedule_enabled: boolean;
+  schedule_time: string;
+  timezone: string;
+  language: string;
+  last_run_local_date: string | Date | null;
+  scheduler_run_id: string | null;
+};
+
 function sql() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not configured.");
   return neon(process.env.DATABASE_URL);
+}
+
+function normalizeDate(value: string | Date | null) {
+  if (!value) return null;
+  if (typeof value === "string") return value.slice(0, 10);
+  return value.toISOString().slice(0, 10);
 }
 
 export async function ensureSchema() {
@@ -48,6 +64,22 @@ export async function ensureSchema() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(challenge_date, language)
   )`;
+
+  await db`CREATE TABLE IF NOT EXISTS app_settings (
+    id SMALLINT PRIMARY KEY,
+    schedule_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    schedule_time TEXT NOT NULL DEFAULT '20:30',
+    timezone TEXT NOT NULL DEFAULT 'Asia/Kolkata',
+    language TEXT NOT NULL DEFAULT 'java',
+    last_run_local_date DATE,
+    scheduler_run_id TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (id = 1)
+  )`;
+
+  await db`INSERT INTO app_settings (id, language)
+    VALUES (1, ${process.env.DEFAULT_LANGUAGE || "java"})
+    ON CONFLICT (id) DO NOTHING`;
 }
 
 export async function saveSolution(problem: DailyProblem, solution: GeneratedSolution, verification: VerificationResult) {
@@ -129,4 +161,70 @@ export async function getStreakStats(): Promise<StreakStats> {
   }
 
   return { currentStreak: current, longestStreak: longest, totalSolved: dates.length };
+}
+
+export async function getScheduleSettings(): Promise<ScheduleSettings> {
+  if (!process.env.DATABASE_URL) {
+    return {
+      enabled: true,
+      time: "20:30",
+      timezone: "Asia/Kolkata",
+      language: process.env.DEFAULT_LANGUAGE || "java",
+      lastRunLocalDate: null,
+      schedulerRunId: null,
+    };
+  }
+
+  await ensureSchema();
+  const db = sql();
+  const rows = (await db`SELECT schedule_enabled, schedule_time, timezone, language, last_run_local_date, scheduler_run_id
+    FROM app_settings WHERE id = 1 LIMIT 1`) as SettingsRow[];
+  const row = rows[0];
+
+  return {
+    enabled: row.schedule_enabled,
+    time: row.schedule_time,
+    timezone: row.timezone,
+    language: row.language,
+    lastRunLocalDate: normalizeDate(row.last_run_local_date),
+    schedulerRunId: row.scheduler_run_id,
+  };
+}
+
+export async function updateScheduleSettings(input: Pick<ScheduleSettings, "enabled" | "time" | "timezone" | "language">) {
+  await ensureSchema();
+  const db = sql();
+  await db`UPDATE app_settings SET
+    schedule_enabled = ${input.enabled},
+    schedule_time = ${input.time},
+    timezone = ${input.timezone},
+    language = ${input.language},
+    updated_at = NOW()
+    WHERE id = 1`;
+  return getScheduleSettings();
+}
+
+export async function setSchedulerRunId(runId: string) {
+  await ensureSchema();
+  const db = sql();
+  await db`UPDATE app_settings SET scheduler_run_id = ${runId}, updated_at = NOW() WHERE id = 1`;
+}
+
+export async function claimScheduledRun(localDate: string) {
+  await ensureSchema();
+  const db = sql();
+  const rows = await db`UPDATE app_settings
+    SET last_run_local_date = ${localDate}::date, updated_at = NOW()
+    WHERE id = 1
+      AND (last_run_local_date IS NULL OR last_run_local_date <> ${localDate}::date)
+    RETURNING id`;
+  return rows.length > 0;
+}
+
+export async function releaseScheduledRun(localDate: string) {
+  await ensureSchema();
+  const db = sql();
+  await db`UPDATE app_settings
+    SET last_run_local_date = NULL, updated_at = NOW()
+    WHERE id = 1 AND last_run_local_date = ${localDate}::date`;
 }
