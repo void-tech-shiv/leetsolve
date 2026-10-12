@@ -37,6 +37,32 @@ query globalData {
   }
 }`;
 
+const accountStatsQuery = `
+query LeetSolveAccountStats($username: String!) {
+  streakCounter {
+    streakCount
+  }
+  matchedUser(username: $username) {
+    submitStats: submitStatsGlobal {
+      acSubmissionNum {
+        difficulty
+        count
+      }
+    }
+    userCalendar {
+      streak
+      totalActiveDays
+    }
+  }
+}`;
+
+export type LeetCodeAccountStats = {
+  currentStreak: number;
+  longestStreak: number;
+  totalActiveDays: number;
+  totalSolved: number;
+};
+
 function publicHeaders() {
   return {
     "content-type": "application/json",
@@ -56,7 +82,7 @@ function authenticatedHeaders(credentials: LeetCodeCredentials, referer = `${bas
   };
 }
 
-async function graphql(query: string, variables?: Record<string, string>) {
+async function graphql(query: string, variables?: Record<string, unknown>) {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: publicHeaders(),
@@ -70,16 +96,20 @@ async function graphql(query: string, variables?: Record<string, string>) {
   return payload.data;
 }
 
-async function authenticatedGraphql(query: string, credentials: LeetCodeCredentials) {
+async function authenticatedGraphql(
+  query: string,
+  credentials: LeetCodeCredentials,
+  variables?: Record<string, unknown>,
+) {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: authenticatedHeaders(credentials, `${baseUrl}/problemset/`),
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, variables }),
     cache: "no-store",
   });
 
   if (!response.ok) {
-    throw new Error(`LeetCode account verification failed: HTTP ${response.status}`);
+    throw new Error(`LeetCode account request failed: HTTP ${response.status}`);
   }
   const payload = await response.json();
   if (payload?.errors?.length) throw new Error(payload.errors[0]?.message || "LeetCode GraphQL error");
@@ -132,6 +162,30 @@ export async function verifyLeetCodeCredentials(credentials: LeetCodeCredentials
     throw new Error("LeetCode session is not authenticated. Copy fresh LEETCODE_SESSION and csrftoken cookies.");
   }
   return { username: String(status.username) };
+}
+
+export async function getLeetCodeAccountStats(
+  credentials: LeetCodeCredentials,
+  username: string,
+): Promise<LeetCodeAccountStats> {
+  const data = await authenticatedGraphql(accountStatsQuery, credentials, { username });
+  const matchedUser = data?.matchedUser;
+  if (!matchedUser) throw new Error("LeetCode profile stats are unavailable for this account.");
+
+  const counts = Array.isArray(matchedUser?.submitStats?.acSubmissionNum)
+    ? matchedUser.submitStats.acSubmissionNum
+    : [];
+  const allCount = counts.find((item: { difficulty?: string }) => item?.difficulty === "All")?.count;
+  const fallbackTotal = counts
+    .filter((item: { difficulty?: string }) => item?.difficulty && item.difficulty !== "All")
+    .reduce((sum: number, item: { count?: number }) => sum + Number(item?.count || 0), 0);
+
+  return {
+    currentStreak: Number(data?.streakCounter?.streakCount || 0),
+    longestStreak: Number(matchedUser?.userCalendar?.streak || 0),
+    totalActiveDays: Number(matchedUser?.userCalendar?.totalActiveDays || 0),
+    totalSolved: Number(allCount ?? fallbackTotal ?? 0),
+  };
 }
 
 export async function submitSolution(
