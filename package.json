@@ -1,6 +1,6 @@
 {
   "name": "leetsolve",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.0.0",
     "@neondatabase/serverless": "^0.10.4",
     "next": "^15.2.4",
     "react": "^19.0.0",
