@@ -26,6 +26,28 @@
   color: #70dda9;
 }
 
+.secondary-button {
+  min-height: 42px;
+  border: 1px solid rgba(255,255,255,.11);
+  background: #141820;
+  color: #dce1e8;
+  border-radius: 10px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: rgba(25,209,127,.38);
+  color: #70dda9;
+}
+
+.secondary-button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 .auth-shell {
   min-height: 100vh;
   display: grid;
