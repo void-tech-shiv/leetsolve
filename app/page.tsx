@@ -30,7 +30,7 @@ export default async function Home() {
           <span className="brand-mark">L</span>
           <span>LeetSolve</span>
         </a>
-        <div className="top-status"><span className="live-dot" /> Daily automation enabled</div>
+        <div className="top-status"><span className="live-dot" /> Cloud scheduler ready</div>
       </header>
 
       <section className="hero-panel">
@@ -40,7 +40,7 @@ export default async function Home() {
           <p>LeetSolve finds the daily challenge, generates a solution, checks it, retries when needed, and saves the result to your dashboard.</p>
           <div className="hero-actions">
             {problem && <a className="primary-link" href={problem.link} target="_blank" rel="noreferrer">Open today’s problem ↗</a>}
-            <span className="subtle-label">Next automatic run: 00:15 UTC</span>
+            <span className="subtle-label">Choose your daily run time below</span>
           </div>
         </div>
         <div className="hero-orbit" aria-hidden="true">
@@ -86,7 +86,7 @@ export default async function Home() {
             <div className="run-summary">
               <div className={`run-state ${today ? "complete" : "pending"}`}>
                 <span>{today ? "✓" : "○"}</span>
-                <div><strong>{today ? "Solution ready" : "Waiting for today’s run"}</strong><small>{today ? `Saved ${formatDate(today.challenge_date)}` : "Cron will generate it automatically"}</small></div>
+                <div><strong>{today ? "Solution ready" : "Waiting for today’s run"}</strong><small>{today ? `Saved ${formatDate(today.challenge_date)}` : "Your saved schedule will trigger it automatically"}</small></div>
               </div>
               <div className="meta-block"><span>Language</span><strong>{today?.language || language}</strong></div>
               <div className="meta-block"><span>Verification</span><strong>{today?.judge_status || "Not run yet"}</strong></div>
@@ -107,7 +107,7 @@ export default async function Home() {
               <div className="empty-state">
                 <div className="empty-icon">⌁</div>
                 <h3>No solution saved for today yet</h3>
-                <p>Once the scheduled job runs, the generated solution will appear here automatically.</p>
+                <p>Once your scheduled time arrives, the generated solution will appear here automatically.</p>
               </div>
             )}
           </article>
@@ -119,11 +119,11 @@ export default async function Home() {
           <article className="panel automation-panel">
             <div className="section-heading compact"><div><span className="eyebrow">PIPELINE</span><h2>Automation</h2></div><span className="healthy">Healthy</span></div>
             <div className="pipeline">
-              <div className="pipe-item"><span>1</span><div><strong>Fetch challenge</strong><small>Daily problem metadata</small></div></div>
+              <div className="pipe-item"><span>1</span><div><strong>Wait for schedule</strong><small>Cloud workflow checks your local time</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>2</span><div><strong>Generate solution</strong><small>Gemini coding model</small></div></div>
+              <div className="pipe-item"><span>2</span><div><strong>Fetch challenge</strong><small>Daily problem metadata</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>3</span><div><strong>Verify & repair</strong><small>Judge + retry loop</small></div></div>
+              <div className="pipe-item"><span>3</span><div><strong>Generate & verify</strong><small>AI + retry loop</small></div></div>
               <div className="pipe-line" />
               <div className="pipe-item"><span>4</span><div><strong>Save result</strong><small>Neon PostgreSQL</small></div></div>
             </div>
