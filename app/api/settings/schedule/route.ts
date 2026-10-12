@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
+import { auth } from "@/lib/auth/server";
 import { getUserSettings, updateUserSettings } from "@/lib/db";
 import { isValidTimezone } from "@/lib/schedule";
 
@@ -12,8 +12,13 @@ const schema = z.object({
   leetcodeUsername: z.string().trim().max(80).optional(),
 });
 
+async function sessionUserId() {
+  const { data: session } = await auth.getSession();
+  return session?.user?.id || null;
+}
+
 export async function GET() {
-  const { userId } = await auth();
+  const userId = await sessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
@@ -24,7 +29,7 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  const { userId } = await auth();
+  const userId = await sessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
