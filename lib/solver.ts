@@ -3,7 +3,7 @@ import { saveSolution } from "./db";
 import { verifySolution } from "./judge";
 import { getDailyProblem } from "./leetcode";
 
-export async function solveDaily(language = process.env.DEFAULT_LANGUAGE || "java") {
+export async function solveDaily(userId: string, language = process.env.DEFAULT_LANGUAGE || "java") {
   const problem = await getDailyProblem();
   let solution = await generateSolution(problem, language);
   let verification = await verifySolution(solution);
@@ -15,7 +15,7 @@ export async function solveDaily(language = process.env.DEFAULT_LANGUAGE || "jav
     verification = await verifySolution(solution);
   }
 
-  await saveSolution(problem, solution, verification).catch((error) => {
+  await saveSolution(userId, problem, solution, verification).catch((error) => {
     console.warn("Solution generated but database save failed:", error);
   });
 
