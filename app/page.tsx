@@ -1,6 +1,6 @@
 import CodeViewer from "@/components/CodeViewer";
 import SolveControls from "@/components/SolveControls";
-import { getRecentSolutions, getStreakStats, getTodaySolution } from "@/lib/db";
+import { getRecentSolutions, getScheduleSettings, getStreakStats, getTodaySolution } from "@/lib/db";
 import { getDailyProblem } from "@/lib/leetcode";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,15 @@ function difficultyClass(value = "") {
 }
 
 export default async function Home() {
-  const language = process.env.DEFAULT_LANGUAGE || "java";
+  const schedule = await getScheduleSettings().catch(() => ({
+    enabled: true,
+    time: "20:30",
+    timezone: "Asia/Kolkata",
+    language: process.env.DEFAULT_LANGUAGE || "java",
+    lastRunLocalDate: null,
+    schedulerRunId: null,
+  }));
+  const language = schedule.language || process.env.DEFAULT_LANGUAGE || "java";
   const [problem, today, recent, stats] = await Promise.all([
     getDailyProblem().catch(() => null),
     getTodaySolution(language).catch(() => null),
@@ -30,7 +38,7 @@ export default async function Home() {
           <span className="brand-mark">L</span>
           <span>LeetSolve</span>
         </a>
-        <div className="top-status"><span className="live-dot" /> Cloud scheduler ready</div>
+        <div className="top-status"><span className="live-dot" /> {schedule.enabled ? "Daily schedule enabled" : "Schedule paused"}</div>
       </header>
 
       <section className="hero-panel">
@@ -40,7 +48,7 @@ export default async function Home() {
           <p>LeetSolve finds the daily challenge, generates a solution, checks it, retries when needed, and saves the result to your dashboard.</p>
           <div className="hero-actions">
             {problem && <a className="primary-link" href={problem.link} target="_blank" rel="noreferrer">Open today’s problem ↗</a>}
-            <span className="subtle-label">Choose your daily run time below</span>
+            <span className="subtle-label">{schedule.enabled ? `Daily run: ${schedule.time} · ${schedule.timezone}` : "Automatic schedule is paused"}</span>
           </div>
         </div>
         <div className="hero-orbit" aria-hidden="true">
@@ -68,7 +76,7 @@ export default async function Home() {
         </article>
         <article className="stat-card">
           <div className="stat-icon">⚙</div>
-          <div><span>Default language</span><strong className="language-stat">{language}</strong><small>configurable</small></div>
+          <div><span>Scheduled language</span><strong className="language-stat">{language}</strong><small>{schedule.time} · {schedule.timezone}</small></div>
         </article>
       </section>
 
