@@ -24,3 +24,23 @@ export type VerificationResult = {
   stdout?: string;
   stderr?: string;
 };
+
+export type LeetCodeCredentials = {
+  session: string;
+  csrfToken: string;
+};
+
+export type LeetCodeSubmissionResult = {
+  submissionId: string;
+  accepted: boolean;
+  state: string;
+  statusCode?: number;
+  statusMessage: string;
+  runtime?: string;
+  memory?: string;
+  lastTestcase?: string;
+  expectedOutput?: string;
+  codeOutput?: string;
+  totalCorrect?: number;
+  totalTestcases?: number;
+};
