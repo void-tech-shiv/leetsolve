@@ -4,8 +4,11 @@ async function schedulerTick() {
   "use step";
 
   const { getActiveUserSchedules, claimScheduledRun, releaseScheduledRun } = await import("../lib/db");
+  const { touchSchedulerHeartbeat } = await import("../lib/scheduler-state");
   const { getLocalDateKey, isScheduleDue } = await import("../lib/schedule");
   const { solveDaily } = await import("../lib/solver");
+
+  await touchSchedulerHeartbeat();
 
   const settingsList = await getActiveUserSchedules();
   let solved = 0;
@@ -27,6 +30,7 @@ async function schedulerTick() {
     }
   }
 
+  await touchSchedulerHeartbeat();
   return { status: "checked", users: settingsList.length, solved, failures };
 }
 
