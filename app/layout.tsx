@@ -1,8 +1,6 @@
-import "@neondatabase/auth-ui/css";
 import "./globals.css";
 import "./additions.css";
 import type { Metadata } from "next";
-import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "LeetSolve — Daily AI Solver",
@@ -12,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body><Providers>{children}</Providers></body>
+      <body>{children}</body>
     </html>
   );
 }
