@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
-import type { DailyProblem, GeneratedSolution, VerificationResult } from "./types";
+import { decryptSecret, encryptSecret } from "./crypto";
+import type { DailyProblem, GeneratedSolution, LeetCodeCredentials, LeetCodeSubmissionResult, VerificationResult } from "./types";
 import type { ScheduleSettings } from "./schedule";
 
 export type SolutionRow = {
@@ -12,6 +13,11 @@ export type SolutionRow = {
   language: string;
   status: string;
   judge_status?: string | null;
+  submission_id?: string | null;
+  submission_status?: string | null;
+  runtime?: string | null;
+  memory?: string | null;
+  submitted_at?: string | Date | null;
   created_at: string | Date;
   problem_url?: string;
   code?: string;
@@ -29,6 +35,8 @@ export type StreakStats = {
 export type UserSettings = ScheduleSettings & {
   userId: string;
   leetcodeUsername: string | null;
+  leetcodeConnected: boolean;
+  leetcodeVerifiedAt: string | Date | null;
 };
 
 type SettingsRow = {
@@ -39,6 +47,8 @@ type SettingsRow = {
   timezone: string;
   language: string;
   last_run_local_date: string | Date | null;
+  leetcode_connected?: boolean;
+  leetcode_verified_at?: string | Date | null;
 };
 
 function sql() {
@@ -70,10 +80,20 @@ export async function ensureSchema() {
     space_complexity TEXT NOT NULL,
     status TEXT NOT NULL,
     judge_status TEXT,
+    submission_id TEXT,
+    submission_status TEXT,
+    runtime TEXT,
+    memory TEXT,
+    submitted_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
 
   await db`ALTER TABLE solutions ADD COLUMN IF NOT EXISTS user_id TEXT`;
+  await db`ALTER TABLE solutions ADD COLUMN IF NOT EXISTS submission_id TEXT`;
+  await db`ALTER TABLE solutions ADD COLUMN IF NOT EXISTS submission_status TEXT`;
+  await db`ALTER TABLE solutions ADD COLUMN IF NOT EXISTS runtime TEXT`;
+  await db`ALTER TABLE solutions ADD COLUMN IF NOT EXISTS memory TEXT`;
+  await db`ALTER TABLE solutions ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ`;
   await db`ALTER TABLE solutions DROP CONSTRAINT IF EXISTS solutions_challenge_date_language_key`;
   await db`CREATE UNIQUE INDEX IF NOT EXISTS solutions_user_day_language_unique
     ON solutions(user_id, challenge_date, language)`;
@@ -83,6 +103,9 @@ export async function ensureSchema() {
   await db`CREATE TABLE IF NOT EXISTS user_settings (
     user_id TEXT PRIMARY KEY,
     leetcode_username TEXT,
+    leetcode_session_enc TEXT,
+    leetcode_csrf_enc TEXT,
+    leetcode_verified_at TIMESTAMPTZ,
     schedule_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     schedule_time TEXT NOT NULL DEFAULT '20:30',
     timezone TEXT NOT NULL DEFAULT 'Asia/Kolkata',
@@ -92,6 +115,9 @@ export async function ensureSchema() {
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
   await db`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS leetcode_username TEXT`;
+  await db`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS leetcode_session_enc TEXT`;
+  await db`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS leetcode_csrf_enc TEXT`;
+  await db`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS leetcode_verified_at TIMESTAMPTZ`;
 
   await db`CREATE TABLE IF NOT EXISTS system_settings (
     id SMALLINT PRIMARY KEY,
@@ -114,6 +140,8 @@ function mapSettings(row: SettingsRow, schedulerRunId: string | null = null): Us
   return {
     userId: row.user_id,
     leetcodeUsername: row.leetcode_username,
+    leetcodeConnected: Boolean(row.leetcode_connected),
+    leetcodeVerifiedAt: row.leetcode_verified_at || null,
     enabled: row.schedule_enabled,
     time: row.schedule_time,
     timezone: row.timezone,
@@ -123,18 +151,31 @@ function mapSettings(row: SettingsRow, schedulerRunId: string | null = null): Us
   };
 }
 
-export async function saveSolution(userId: string, problem: DailyProblem, solution: GeneratedSolution, verification: VerificationResult) {
+export async function saveSolution(
+  userId: string,
+  problem: DailyProblem,
+  solution: GeneratedSolution,
+  verification: VerificationResult,
+  submission?: LeetCodeSubmissionResult | null,
+) {
   await ensureSchema();
   const db = sql();
-  const status = verification.configured ? (verification.passed ? "verified" : "generated") : "generated";
+  const status = submission
+    ? (submission.accepted ? "accepted" : "submitted")
+    : verification.configured
+      ? (verification.passed ? "verified" : "generated")
+      : "generated";
 
   await db`INSERT INTO solutions (
       user_id, challenge_date, title, slug, difficulty, problem_url, language, code,
-      explanation, time_complexity, space_complexity, status, judge_status
+      explanation, time_complexity, space_complexity, status, judge_status,
+      submission_id, submission_status, runtime, memory, submitted_at
     ) VALUES (
       ${userId}, ${problem.date}, ${problem.title}, ${problem.titleSlug}, ${problem.difficulty}, ${problem.link},
       ${solution.language}, ${solution.code}, ${solution.explanation}, ${solution.timeComplexity},
-      ${solution.spaceComplexity}, ${status}, ${verification.status}
+      ${solution.spaceComplexity}, ${status}, ${verification.status},
+      ${submission?.submissionId || null}, ${submission?.statusMessage || null},
+      ${submission?.runtime || null}, ${submission?.memory || null}, ${submission ? new Date().toISOString() : null}
     )
     ON CONFLICT (user_id, challenge_date, language) DO UPDATE SET
       code = EXCLUDED.code,
@@ -143,6 +184,11 @@ export async function saveSolution(userId: string, problem: DailyProblem, soluti
       space_complexity = EXCLUDED.space_complexity,
       status = EXCLUDED.status,
       judge_status = EXCLUDED.judge_status,
+      submission_id = EXCLUDED.submission_id,
+      submission_status = EXCLUDED.submission_status,
+      runtime = EXCLUDED.runtime,
+      memory = EXCLUDED.memory,
+      submitted_at = EXCLUDED.submitted_at,
       created_at = NOW()`;
 }
 
@@ -150,7 +196,8 @@ export async function getRecentSolutions(userId: string, limit = 10): Promise<So
   if (!process.env.DATABASE_URL) return [];
   await ensureSchema();
   const db = sql();
-  return (await db`SELECT id, user_id, challenge_date, title, slug, difficulty, language, status, judge_status, created_at, problem_url
+  return (await db`SELECT id, user_id, challenge_date, title, slug, difficulty, language, status, judge_status,
+      submission_id, submission_status, runtime, memory, submitted_at, created_at, problem_url
     FROM solutions WHERE user_id = ${userId}
     ORDER BY challenge_date DESC, created_at DESC LIMIT ${limit}`) as SolutionRow[];
 }
@@ -188,7 +235,7 @@ export async function getStreakStats(userId: string, timezone = "Asia/Kolkata"):
   await ensureSchema();
   const db = sql();
   const rows = (await db`SELECT DISTINCT challenge_date FROM solutions
-    WHERE user_id = ${userId}
+    WHERE user_id = ${userId} AND status = 'accepted'
     ORDER BY challenge_date DESC LIMIT 1000`) as Array<{ challenge_date: string | Date }>;
   const dates = rows.map((row) => dateKey(row.challenge_date));
   if (dates.length === 0) return { currentStreak: 0, longestStreak: 0, totalSolved: 0 };
@@ -232,7 +279,9 @@ export async function setSystemSchedulerRunId(runId: string) {
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   await ensureUserSettings(userId);
   const db = sql();
-  const rows = (await db`SELECT user_id, leetcode_username, schedule_enabled, schedule_time, timezone, language, last_run_local_date
+  const rows = (await db`SELECT user_id, leetcode_username, schedule_enabled, schedule_time, timezone, language,
+      last_run_local_date, leetcode_verified_at,
+      (leetcode_session_enc IS NOT NULL AND leetcode_csrf_enc IS NOT NULL) AS leetcode_connected
     FROM user_settings WHERE user_id = ${userId} LIMIT 1`) as SettingsRow[];
   const schedulerRunId = await getSystemSchedulerRunId();
   return mapSettings(rows[0], schedulerRunId);
@@ -250,7 +299,7 @@ export async function updateUserSettings(userId: string, input: {
   const username = input.leetcodeUsername?.trim() || null;
 
   await db`UPDATE user_settings SET
-    leetcode_username = ${username},
+    leetcode_username = COALESCE(${username}, leetcode_username),
     schedule_enabled = ${input.enabled},
     schedule_time = ${input.time},
     timezone = ${input.timezone},
@@ -261,12 +310,63 @@ export async function updateUserSettings(userId: string, input: {
   return getUserSettings(userId);
 }
 
+export async function saveLeetCodeCredentials(userId: string, credentials: LeetCodeCredentials, username: string | null) {
+  await ensureUserSettings(userId);
+  const db = sql();
+  const sessionEncrypted = encryptSecret(credentials.session);
+  const csrfEncrypted = encryptSecret(credentials.csrfToken);
+
+  await db`UPDATE user_settings SET
+    leetcode_session_enc = ${sessionEncrypted},
+    leetcode_csrf_enc = ${csrfEncrypted},
+    leetcode_username = COALESCE(${username}, leetcode_username),
+    leetcode_verified_at = NOW(),
+    updated_at = NOW()
+    WHERE user_id = ${userId}`;
+
+  return getUserSettings(userId);
+}
+
+export async function getLeetCodeCredentials(userId: string): Promise<LeetCodeCredentials | null> {
+  await ensureUserSettings(userId);
+  const db = sql();
+  const rows = await db`SELECT leetcode_session_enc, leetcode_csrf_enc
+    FROM user_settings WHERE user_id = ${userId} LIMIT 1` as Array<{
+      leetcode_session_enc: string | null;
+      leetcode_csrf_enc: string | null;
+    }>;
+  const row = rows[0];
+  if (!row?.leetcode_session_enc || !row?.leetcode_csrf_enc) return null;
+
+  const session = decryptSecret(row.leetcode_session_enc);
+  const csrfToken = decryptSecret(row.leetcode_csrf_enc);
+  if (!session || !csrfToken) return null;
+  return { session, csrfToken };
+}
+
+export async function clearLeetCodeCredentials(userId: string) {
+  await ensureUserSettings(userId);
+  const db = sql();
+  await db`UPDATE user_settings SET
+    leetcode_session_enc = NULL,
+    leetcode_csrf_enc = NULL,
+    leetcode_verified_at = NULL,
+    updated_at = NOW()
+    WHERE user_id = ${userId}`;
+  return getUserSettings(userId);
+}
+
 export async function getActiveUserSchedules(): Promise<UserSettings[]> {
   if (!process.env.DATABASE_URL) return [];
   await ensureSchema();
   const db = sql();
-  const rows = (await db`SELECT user_id, leetcode_username, schedule_enabled, schedule_time, timezone, language, last_run_local_date
-    FROM user_settings WHERE schedule_enabled = TRUE`) as SettingsRow[];
+  const rows = (await db`SELECT user_id, leetcode_username, schedule_enabled, schedule_time, timezone, language,
+      last_run_local_date, leetcode_verified_at,
+      (leetcode_session_enc IS NOT NULL AND leetcode_csrf_enc IS NOT NULL) AS leetcode_connected
+    FROM user_settings
+    WHERE schedule_enabled = TRUE
+      AND leetcode_session_enc IS NOT NULL
+      AND leetcode_csrf_enc IS NOT NULL`) as SettingsRow[];
   return rows.map((row) => mapSettings(row, null));
 }
 
