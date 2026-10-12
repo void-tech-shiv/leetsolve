@@ -1,5 +1,6 @@
 import "@neondatabase/auth-ui/css";
 import "./globals.css";
+import "./additions.css";
 import type { Metadata } from "next";
 import { Providers } from "./providers";
 
