@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
     const result = await solveDaily(session.user.id, body.language || process.env.DEFAULT_LANGUAGE || "java");
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const lower = message.toLowerCase();
+    const status = lower.includes("subscription") || lower.includes("activation key") ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
