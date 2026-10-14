@@ -1,0 +1,350 @@
+/* LeetSolve brand theme for the split coding workspace.
+   Layout stays judge-style; colors/materials stay LeetSolve green + glass. */
+:root {
+  --ls-bg: #020807;
+  --ls-surface: rgba(7, 20, 17, .74);
+  --ls-surface-strong: rgba(6, 17, 15, .90);
+  --ls-surface-soft: rgba(13, 31, 26, .62);
+  --ls-line: rgba(73, 255, 188, .13);
+  --ls-line-strong: rgba(73, 255, 188, .26);
+  --ls-green: #19d17f;
+  --ls-green-2: #42eda7;
+  --ls-text: #f4fbf8;
+  --ls-muted: #91a49c;
+}
+
+html,
+body,
+.lc-app-shell {
+  background: var(--ls-bg) !important;
+}
+
+body {
+  background-image:
+    radial-gradient(900px 540px at 6% -8%, rgba(20, 255, 164, .12), transparent 66%),
+    radial-gradient(760px 480px at 96% 4%, rgba(20, 190, 132, .075), transparent 66%),
+    linear-gradient(rgba(69, 255, 190, .022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(69, 255, 190, .022) 1px, transparent 1px),
+    linear-gradient(180deg, #020807 0%, #030a08 55%, #020706 100%) !important;
+  background-size: auto, auto, 52px 52px, 52px 52px, auto !important;
+  background-attachment: fixed !important;
+  color: var(--ls-text) !important;
+}
+
+body::before {
+  display: block !important;
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 28% 35%, rgba(30, 255, 175, .035), transparent 21%),
+    radial-gradient(circle at 79% 47%, rgba(22, 218, 147, .03), transparent 22%);
+}
+
+::selection {
+  background: rgba(25, 209, 127, .28) !important;
+  color: #fff !important;
+}
+
+/* top navigation */
+.lc-main-topbar {
+  background: linear-gradient(135deg, rgba(4, 17, 14, .88), rgba(3, 11, 10, .80)) !important;
+  border-bottom: 1px solid var(--ls-line) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255,255,255,.022) !important;
+  backdrop-filter: blur(20px) saturate(135%) !important;
+}
+
+.lc-main-topbar .brand > span:last-child {
+  color: #f7fffb !important;
+}
+
+.lc-main-topbar .brand-mark {
+  filter: drop-shadow(0 0 12px rgba(48, 255, 178, .28)) !important;
+}
+
+.lc-main-topbar .lc-nav a {
+  color: #9fb0a9 !important;
+}
+
+.lc-main-topbar .lc-nav a:first-child,
+.lc-main-topbar .lc-nav a:hover {
+  color: #eafff5 !important;
+  background: rgba(25, 209, 127, .055) !important;
+  border-bottom-color: var(--ls-green) !important;
+}
+
+.top-status,
+.user-meta {
+  color: #9db0a7 !important;
+}
+
+.live-dot {
+  background: var(--ls-green) !important;
+  box-shadow: 0 0 0 4px rgba(25, 209, 127, .08) !important;
+}
+
+.account-link,
+.secondary-button,
+.lc-secondary-action {
+  background: rgba(9, 25, 21, .72) !important;
+  border-color: rgba(88, 255, 196, .13) !important;
+  color: #d8e8e1 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.022) !important;
+  backdrop-filter: blur(14px);
+}
+
+.account-link:hover,
+.secondary-button:hover:not(:disabled),
+.lc-secondary-action:hover {
+  background: rgba(14, 42, 33, .82) !important;
+  border-color: rgba(74, 255, 187, .32) !important;
+  color: #7ef0b7 !important;
+}
+
+/* split panes */
+.lc-workspace {
+  background: transparent !important;
+}
+
+.lc-pane {
+  border-color: var(--ls-line) !important;
+  background:
+    linear-gradient(155deg, rgba(7, 22, 18, .80), rgba(3, 12, 10, .91)) !important;
+  box-shadow: 0 18px 60px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.02) !important;
+  backdrop-filter: blur(20px) saturate(125%) !important;
+}
+
+.lc-pane-tabs,
+.lc-editor-topbar,
+.lc-console-tabs {
+  background: rgba(5, 17, 14, .68) !important;
+  border-color: rgba(74, 255, 189, .08) !important;
+  backdrop-filter: blur(14px);
+}
+
+.lc-pane-tabs span,
+.lc-pane-tabs a,
+.lc-console-tabs span,
+.lc-editor-meta span {
+  color: #8fa49b !important;
+}
+
+.lc-pane-tabs .active,
+.lc-console-tabs .active {
+  color: #eafff5 !important;
+  border-color: var(--ls-green) !important;
+}
+
+.lc-breadcrumb,
+.lc-section-header span,
+.lc-problem-summary span,
+.lc-complexity-row span {
+  color: #789188 !important;
+}
+
+.lc-problem-heading h1,
+.lc-section-header h3,
+.lc-description-section h3 {
+  color: #f4fbf8 !important;
+}
+
+.lc-description-section p {
+  color: #a8b9b2 !important;
+}
+
+.lc-problem-actions,
+.lc-description-section,
+.lc-account-section,
+.lc-submissions-section {
+  border-color: rgba(73, 255, 188, .075) !important;
+}
+
+.lc-verdict-pill.accepted {
+  color: #78efad !important;
+  background: rgba(25, 209, 127, .09) !important;
+  border-color: rgba(73, 255, 188, .16) !important;
+}
+
+.lc-verdict-pill.pending {
+  color: #a8b7b1 !important;
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.07) !important;
+}
+
+.lc-problem-summary > div,
+.lc-complexity-row > div {
+  background: rgba(8, 25, 20, .62) !important;
+  border-color: rgba(76, 255, 191, .10) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.016) !important;
+  backdrop-filter: blur(12px);
+}
+
+/* code editor */
+.lc-editor-body {
+  background: rgba(1, 7, 6, .58) !important;
+}
+
+.code-shell {
+  background: rgba(1, 7, 6, .84) !important;
+  border-color: rgba(74, 255, 188, .10) !important;
+  box-shadow: inset 0 0 70px rgba(20, 150, 100, .02) !important;
+}
+
+.code-toolbar {
+  background: rgba(7, 20, 16, .76) !important;
+  border-bottom-color: rgba(75, 255, 191, .08) !important;
+  color: #83978f !important;
+}
+
+.code-toolbar button {
+  background: rgba(12, 33, 27, .78) !important;
+  border-color: rgba(73, 255, 188, .12) !important;
+  color: #c9dbd3 !important;
+}
+
+.code-toolbar button:hover {
+  color: #73eeb2 !important;
+  border-color: rgba(73, 255, 188, .28) !important;
+}
+
+pre {
+  color: #e4eee9 !important;
+}
+
+.lc-empty-editor {
+  color: #83978f !important;
+}
+
+.lc-empty-editor div {
+  color: var(--ls-green) !important;
+}
+
+.lc-console {
+  background: rgba(5, 16, 13, .77) !important;
+  border-top-color: rgba(73, 255, 188, .09) !important;
+  backdrop-filter: blur(16px);
+}
+
+/* actions / form controls */
+.primary-button,
+.primary-link {
+  background: linear-gradient(135deg, #38eea5 0%, #19d17f 62%, #12bd70 100%) !important;
+  border-color: rgba(116, 255, 207, .36) !important;
+  color: #03140c !important;
+  box-shadow: 0 10px 30px rgba(25, 209, 127, .14), inset 0 1px 0 rgba(255,255,255,.38) !important;
+}
+
+.primary-button:hover:not(:disabled),
+.primary-link:hover {
+  filter: brightness(1.06) !important;
+  box-shadow: 0 14px 38px rgba(25, 209, 127, .22), inset 0 1px 0 rgba(255,255,255,.42) !important;
+}
+
+.field input,
+.field select {
+  background: rgba(3, 13, 10, .78) !important;
+  border-color: rgba(73, 255, 188, .11) !important;
+  color: #dceae4 !important;
+  backdrop-filter: blur(10px);
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: rgba(73, 255, 188, .42) !important;
+  box-shadow: 0 0 0 3px rgba(25, 209, 127, .06) !important;
+}
+
+/* cards below workspace */
+.lc-settings-area {
+  background: transparent !important;
+}
+
+.controls-card,
+.panel,
+.stat-card,
+.auth-panel {
+  background:
+    linear-gradient(155deg, rgba(8, 24, 20, .76), rgba(4, 13, 12, .88)) !important;
+  border-color: var(--ls-line) !important;
+  box-shadow: 0 18px 60px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.02) !important;
+  backdrop-filter: blur(18px) saturate(120%) !important;
+}
+
+.stat-card:hover {
+  background: rgba(10, 29, 24, .82) !important;
+  border-color: rgba(73, 255, 188, .22) !important;
+}
+
+.stat-card.accent {
+  background: linear-gradient(145deg, rgba(25, 209, 127, .09), rgba(4, 14, 12, .88)) !important;
+}
+
+.stat-icon,
+.run-state,
+.meta-block,
+.complexity-box > div,
+.pipe-item > span {
+  background: rgba(5, 17, 14, .78) !important;
+  border-color: rgba(73, 255, 188, .10) !important;
+}
+
+.eyebrow {
+  color: #65e8aa !important;
+}
+
+.notice.ok,
+.healthy {
+  color: #7ee5b6 !important;
+  background: rgba(25, 209, 127, .07) !important;
+  border-color: rgba(25, 209, 127, .15) !important;
+}
+
+.notice.error {
+  background: rgba(243, 108, 122, .07) !important;
+  border-color: rgba(243, 108, 122, .15) !important;
+}
+
+.pipe-line {
+  background: linear-gradient(rgba(73,255,188,.14), rgba(28,88,66,.18)) !important;
+}
+
+.pipe-item > span {
+  color: #65e8aa !important;
+}
+
+.history-row {
+  border-top-color: rgba(73, 255, 188, .065) !important;
+}
+
+.history-row:hover {
+  background: linear-gradient(90deg, rgba(25, 209, 127, .04), transparent) !important;
+}
+
+.history-row:hover .history-copy strong {
+  color: #76e6b1 !important;
+}
+
+.history-check {
+  color: #74e3ac !important;
+  background: rgba(25, 209, 127, .07) !important;
+}
+
+/* keep familiar difficulty colors */
+.difficulty.easy { color: #00b8a3 !important; background: rgba(0,184,163,.12) !important; }
+.difficulty.medium { color: #f4c454 !important; background: rgba(244,196,84,.10) !important; }
+.difficulty.hard { color: #f36c7a !important; background: rgba(243,108,122,.10) !important; }
+
+.lc-footer {
+  border-top-color: rgba(73, 255, 188, .08) !important;
+  color: #60766d !important;
+}
+
+@media (max-width: 900px) {
+  .lc-pane,
+  .controls-card,
+  .panel {
+    backdrop-filter: blur(14px) saturate(115%) !important;
+  }
+}
