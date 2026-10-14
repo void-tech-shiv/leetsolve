@@ -23,7 +23,7 @@ export default async function ActivatePage() {
       <div className="auth-panel">
         {subscription?.status === "EXPIRED" && (
           <div className="notice error" style={{ marginBottom: 16 }}>
-            Your previous LeetSolve subscription has expired. Activate a new key to continue.
+            Your previous LeetSolve access has expired. Activate a new key to continue.
           </div>
         )}
         <ActivationForm storeUrl={storeUrl} />
