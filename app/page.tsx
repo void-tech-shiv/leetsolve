@@ -4,6 +4,7 @@ import SolveControls from "@/components/SolveControls";
 import { auth } from "@/lib/auth/server";
 import { getLeetCodeCredentials, getRecentSolutions, getTodaySolution, getUserSettings } from "@/lib/db";
 import { getDailyProblem, getLeetCodeAccountStats } from "@/lib/leetcode";
+import { getSubscriptionStatus } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,9 @@ export default async function Home() {
   if (!session?.user) redirect("/auth/sign-in");
 
   const userId = session.user.id;
+  const subscription = await getSubscriptionStatus(userId).catch(() => null);
+  if (!subscription?.active) redirect("/activate");
+
   const schedule = await getUserSettings(userId).catch(() => ({
     userId,
     leetcodeUsername: null,
@@ -56,7 +60,7 @@ export default async function Home() {
         </a>
         <div className="account-strip">
           <div className="top-status">
-            <span className="live-dot" /> {schedule.leetcodeConnected ? (schedule.enabled ? "Auto-submit enabled" : "Schedule paused") : "Connect LeetCode"}
+            <span className="live-dot" /> Pro active · {subscription.daysRemaining} day{subscription.daysRemaining === 1 ? "" : "s"} left
           </div>
           <div className="user-meta">
             <span>{schedule.leetcodeUsername ? `@${schedule.leetcodeUsername}` : session.user.name || session.user.email || "Account"}</span>
