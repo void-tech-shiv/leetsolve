@@ -33,7 +33,7 @@ type LeetCodeConnection = {
   verifiedAt?: string | null;
 };
 
-export default function SolveControls({ defaultLanguage }: { defaultLanguage: string }) {
+export default function SolveControls({ defaultLanguage, automationActive }: { defaultLanguage: string; automationActive: boolean }) {
   const router = useRouter();
   const [language, setLanguage] = useState(defaultLanguage);
   const [loading, setLoading] = useState(false);
@@ -130,6 +130,12 @@ export default function SolveControls({ defaultLanguage }: { defaultLanguage: st
   }
 
   async function runSolve() {
+    if (!automationActive) {
+      setKind("error");
+      setMessage("Activate a LeetSolve access key to unlock solving and submission.");
+      return;
+    }
+
     setLoading(true);
     setMessage("Generating, checking and submitting today’s solution…");
     setKind("ok");
@@ -156,6 +162,12 @@ export default function SolveControls({ defaultLanguage }: { defaultLanguage: st
   }
 
   async function saveSchedule() {
+    if (!automationActive) {
+      setScheduleKind("error");
+      setScheduleMessage("Activate a LeetSolve access key to enable daily automation.");
+      return;
+    }
+
     setSavingSchedule(true);
     setScheduleKind("ok");
     setScheduleMessage("Saving your schedule…");
@@ -200,12 +212,26 @@ export default function SolveControls({ defaultLanguage }: { defaultLanguage: st
 
   return (
     <>
+      {!automationActive && (
+        <div className="controls-card">
+          <div>
+            <div className="eyebrow">PRO AUTOMATION</div>
+            <h3>Dashboard access is free. Automation needs an activation key.</h3>
+            <p className="muted small">You can sign in, connect your LeetCode account and view account stats without a key. Daily auto-submit and “Solve & submit now” unlock only after activation.</p>
+          </div>
+          <div className="controls-row">
+            <a className="primary-button" href="/activate">Activate access key</a>
+            <a className="secondary-button" href="https://shiv-tools-store.vercel.app/product/leetsolve-pro" target="_blank" rel="noreferrer">Buy 30-day key ↗</a>
+          </div>
+        </div>
+      )}
+
       <div className="controls-card">
         <div>
           <div className="eyebrow">LeetCode account</div>
           <h3>{connection.connected ? `Connected as ${connection.username || "LeetCode user"}` : "Connect your LeetCode session"}</h3>
           <p className="muted small">
-            LeetSolve uses your LEETCODE_SESSION and csrftoken only on the server to submit solutions to your account. Saved values are encrypted and are never shown back in the browser.
+            LeetSolve uses your LEETCODE_SESSION and csrftoken only on the server to read your account stats and, after activation, submit solutions. Saved values are encrypted and are never shown back in the browser.
           </p>
         </div>
 
@@ -257,15 +283,16 @@ export default function SolveControls({ defaultLanguage }: { defaultLanguage: st
 
       <div className="controls-card">
         <div>
-          <div className="eyebrow">Daily automation</div>
+          <div className="eyebrow">Daily automation {automationActive ? "· UNLOCKED" : "· LOCKED"}</div>
           <h3>Choose when LeetSolve submits every day</h3>
-          <p className="muted small">The cloud scheduler runs even when your laptop is off. A connected LeetCode account is required.</p>
+          <p className="muted small">The cloud scheduler runs even when your laptop is off. An active LeetSolve key and connected LeetCode account are required.</p>
         </div>
         <div className="controls-row">
           <label className="field">
             <span>Automatic solving</span>
             <select
               value={schedule.enabled ? "on" : "off"}
+              disabled={!automationActive}
               onChange={(event) => setSchedule((current) => ({ ...current, enabled: event.target.value === "on" }))}
             >
               <option value="on">Enabled</option>
@@ -277,6 +304,7 @@ export default function SolveControls({ defaultLanguage }: { defaultLanguage: st
             <input
               type="time"
               value={schedule.time}
+              disabled={!automationActive}
               onChange={(event) => setSchedule((current) => ({ ...current, time: event.target.value }))}
             />
           </label>
@@ -284,6 +312,7 @@ export default function SolveControls({ defaultLanguage }: { defaultLanguage: st
             <span>Timezone</span>
             <select
               value={schedule.timezone}
+              disabled={!automationActive}
               onChange={(event) => setSchedule((current) => ({ ...current, timezone: event.target.value }))}
             >
               {timezones.map((timezone) => <option value={timezone} key={timezone}>{timezone}</option>)}
@@ -293,36 +322,39 @@ export default function SolveControls({ defaultLanguage }: { defaultLanguage: st
             <span>Language</span>
             <select
               value={schedule.language}
+              disabled={!automationActive}
               onChange={(event) => setSchedule((current) => ({ ...current, language: event.target.value }))}
             >
               {languages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
-          <button className="primary-button" onClick={saveSchedule} disabled={savingSchedule}>
-            {savingSchedule ? "Saving…" : "Save schedule"}
+          <button className="primary-button" onClick={saveSchedule} disabled={savingSchedule || !automationActive}>
+            {!automationActive ? "🔒 Activate to unlock" : savingSchedule ? "Saving…" : "Save schedule"}
           </button>
         </div>
+        {!automationActive && <div className="notice error">Automation is locked. Activate a valid 7-day trial or 30-day access key to enable it.</div>}
         {scheduleMessage && <div className={`notice ${scheduleKind}`}>{scheduleMessage}</div>}
       </div>
 
       <div className="controls-card">
         <div>
-          <div className="eyebrow">Manual test</div>
+          <div className="eyebrow">Manual test {automationActive ? "· UNLOCKED" : "· LOCKED"}</div>
           <h3>Solve and submit today’s problem now</h3>
           <p className="muted small">LeetSolve generates the solution, verifies it when possible, submits it to LeetCode and repairs/retries failed submissions automatically.</p>
         </div>
         <div className="controls-row">
           <label className="field">
             <span>Language</span>
-            <select value={language} onChange={(event) => setLanguage(event.target.value)}>
+            <select value={language} disabled={!automationActive} onChange={(event) => setLanguage(event.target.value)}>
               {languages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
-          <button className="primary-button" onClick={runSolve} disabled={loading || !connection.connected}>
-            {loading ? "Solving & submitting…" : "Solve & submit now"}
+          <button className="primary-button" onClick={runSolve} disabled={loading || !connection.connected || !automationActive}>
+            {!automationActive ? "🔒 Activate to submit" : loading ? "Solving & submitting…" : "Solve & submit now"}
           </button>
         </div>
-        {!connection.connected && <div className="notice error">Connect your LeetCode account first.</div>}
+        {!automationActive && <div className="notice error">A LeetSolve activation key is required for AI solving and LeetCode submission.</div>}
+        {automationActive && !connection.connected && <div className="notice error">Connect your LeetCode account first.</div>}
         {message && <div className={`notice ${kind}`}>{message}</div>}
       </div>
     </>
