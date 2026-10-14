@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const lower = message.toLowerCase();
+    const status = lower.includes("groq api key") || lower.includes("connect your leetcode") ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
