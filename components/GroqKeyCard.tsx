@@ -81,34 +81,52 @@ export default function GroqKeyCard({
               Connected ✓ {verifiedAt ? `· verified ${new Date(verifiedAt).toLocaleString()}` : ""}
             </div>
           </div>
+          <a
+            className="secondary-button"
+            href="https://console.groq.com/keys"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Manage Groq keys ↗
+          </a>
           <button className="secondary-button" type="button" onClick={remove} disabled={loading}>
             {loading ? "Working…" : "Remove key"}
           </button>
         </div>
       ) : (
-        <div className="controls-row">
-          <label className="field grow">
-            <span>Groq API key</span>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              placeholder="gsk_..."
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </label>
-          <button className="primary-button" type="button" onClick={save} disabled={loading || apiKey.trim().length < 20}>
-            {loading ? "Verifying…" : "Verify & save"}
-          </button>
-        </div>
+        <>
+          <div className="controls-row">
+            <label className="field grow">
+              <span>Groq API key</span>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+                placeholder="gsk_..."
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <button className="primary-button" type="button" onClick={save} disabled={loading || apiKey.trim().length < 20}>
+              {loading ? "Verifying…" : "Verify & save"}
+            </button>
+          </div>
+          <div className="controls-row">
+            <a
+              className="secondary-button"
+              href="https://console.groq.com/keys"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Create Groq API Key ↗
+            </a>
+            <p className="muted small">
+              Groq Console will open in a new tab. Create a key there, copy it once, then return here and paste it above. Never share your key in chat.
+            </p>
+          </div>
+        </>
       )}
 
-      {!connected && (
-        <p className="muted small">
-          Don&apos;t have one? Create a Groq API key in the Groq Console, then paste it here. Do not send your key in chat.
-        </p>
-      )}
       {message && <div className={`notice ${kind}`}>{message}</div>}
     </div>
   );
