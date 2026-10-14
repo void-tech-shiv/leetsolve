@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/server";
 import { getUserSettings, updateUserSettings } from "@/lib/db";
 import { isValidTimezone } from "@/lib/schedule";
 import { ensureSchedulerRunning } from "@/lib/start-scheduler";
+import { hasActiveSubscription } from "@/lib/subscription";
 
 const schema = z.object({
   enabled: z.boolean(),
@@ -24,11 +25,14 @@ export async function GET() {
 
   try {
     const settings = await getUserSettings(userId);
-    if (settings.enabled) {
+    const automationActive = await hasActiveSubscription(userId).catch(() => false);
+    if (settings.enabled && automationActive) {
       const scheduler = await ensureSchedulerRunning();
       settings.schedulerRunId = scheduler.runId;
+    } else if (!automationActive) {
+      settings.schedulerRunId = null;
     }
-    return NextResponse.json(settings);
+    return NextResponse.json({ ...settings, automationActive });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
@@ -46,11 +50,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const settings = await updateUserSettings(userId, parsed.data);
-    if (settings.enabled) {
+    const automationActive = await hasActiveSubscription(userId).catch(() => false);
+    if (settings.enabled && automationActive) {
       const scheduler = await ensureSchedulerRunning();
       settings.schedulerRunId = scheduler.runId;
+    } else if (!automationActive) {
+      settings.schedulerRunId = null;
     }
-    return NextResponse.json(settings);
+    return NextResponse.json({ ...settings, automationActive });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
