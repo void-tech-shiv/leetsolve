@@ -3,6 +3,7 @@ import { getLeetCodeCredentials, saveSolution } from "./db";
 import { verifySolution } from "./judge";
 import { getDailyProblem, submitAndWait } from "./leetcode";
 import { requireActiveSubscription } from "./subscription";
+import { requireGroqApiKey } from "./user-groq";
 import type { LeetCodeSubmissionResult } from "./types";
 
 function submissionFailure(result: LeetCodeSubmissionResult) {
@@ -28,19 +29,29 @@ export async function solveDaily(
     await requireActiveSubscription(userId);
   }
 
+  // Every solve uses the signed-in user's own Groq key. There is intentionally
+  // no server GROQ_API_KEY fallback, so one user's usage never consumes another key.
+  const groqApiKey = await requireGroqApiKey(userId);
+
   const credentials = await getLeetCodeCredentials(userId);
   if (!credentials) {
     throw new Error("Connect your LeetCode account before running the solver.");
   }
 
   const problem = await getDailyProblem();
-  let solution = await generateSolution(problem, language);
+  let solution = await generateSolution(problem, language, groqApiKey);
   let verification = await verifySolution(solution);
 
   const maxRepairs = Math.max(0, Number(process.env.MAX_REPAIR_ATTEMPTS || "2"));
   for (let attempt = 0; verification.configured && !verification.passed && attempt < maxRepairs; attempt += 1) {
     const failure = [verification.status, verification.stderr, verification.stdout].filter(Boolean).join("\n");
-    solution = await repairSolution(problem, language, solution, failure || "Verification failed without details.");
+    solution = await repairSolution(
+      problem,
+      language,
+      solution,
+      failure || "Verification failed without details.",
+      groqApiKey,
+    );
     verification = await verifySolution(solution);
   }
 
@@ -52,12 +63,18 @@ export async function solveDaily(
     if (submission.accepted) break;
 
     if (attempt < maxSubmissionAttempts - 1) {
-      solution = await repairSolution(problem, language, solution, submissionFailure(submission));
+      solution = await repairSolution(problem, language, solution, submissionFailure(submission), groqApiKey);
       verification = await verifySolution(solution);
 
       if (verification.configured && !verification.passed) {
         const localFailure = [verification.status, verification.stderr, verification.stdout].filter(Boolean).join("\n");
-        solution = await repairSolution(problem, language, solution, localFailure || "Local verification failed after repair.");
+        solution = await repairSolution(
+          problem,
+          language,
+          solution,
+          localFailure || "Local verification failed after repair.",
+          groqApiKey,
+        );
         verification = await verifySolution(solution);
       }
     }
