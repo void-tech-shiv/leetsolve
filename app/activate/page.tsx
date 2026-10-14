@@ -12,6 +12,8 @@ export default async function ActivatePage() {
   const subscription = await getSubscriptionStatus(session.user.id).catch(() => null);
   if (subscription?.active) redirect("/");
 
+  const storeUrl = process.env.NEXT_PUBLIC_STORE_URL || "https://shiv-tools-store.vercel.app/product/leetsolve-pro";
+
   return (
     <main className="auth-shell">
       <a className="brand auth-brand" href="/">
@@ -24,7 +26,7 @@ export default async function ActivatePage() {
             Your previous LeetSolve subscription has expired. Activate a new key to continue.
           </div>
         )}
-        <ActivationForm storeUrl={process.env.NEXT_PUBLIC_STORE_URL || null} />
+        <ActivationForm storeUrl={storeUrl} />
         <p className="auth-switch" style={{ marginTop: 18 }}>
           Signed in as {session.user.email || session.user.name || "your account"} · <a href="/auth/sign-out">Sign out</a>
         </p>
