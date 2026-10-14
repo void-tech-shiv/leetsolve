@@ -10,7 +10,15 @@ const languages = [
   { value: "javascript", label: "JavaScript" },
 ];
 
-export default function ManualSolveCard({ defaultLanguage, connected }: { defaultLanguage: string; connected: boolean }) {
+export default function ManualSolveCard({
+  defaultLanguage,
+  connected,
+  groqConnected,
+}: {
+  defaultLanguage: string;
+  connected: boolean;
+  groqConnected: boolean;
+}) {
   const router = useRouter();
   const [language, setLanguage] = useState(defaultLanguage);
   const [loading, setLoading] = useState(false);
@@ -20,7 +28,7 @@ export default function ManualSolveCard({ defaultLanguage, connected }: { defaul
   async function runSolve() {
     setLoading(true);
     setKind("ok");
-    setMessage("Generating, checking and submitting today’s solution…");
+    setMessage("Generating with your Groq API key, checking and submitting today’s solution…");
 
     try {
       const response = await fetch("/api/solve", {
@@ -43,12 +51,14 @@ export default function ManualSolveCard({ defaultLanguage, connected }: { defaul
     }
   }
 
+  const ready = connected && groqConnected;
+
   return (
     <div className="controls-card free-manual-card">
       <div>
         <div className="eyebrow">MANUAL SOLVE · FREE</div>
         <h3>Solve and submit today’s problem now</h3>
-        <p className="muted small">No activation key is required. Connect your LeetCode account, choose a language and run it whenever you want.</p>
+        <p className="muted small">No activation key is required. LeetSolve uses your own Groq API key to generate and repair the solution, then submits it through your connected LeetCode account.</p>
       </div>
       <div className="controls-row">
         <label className="field">
@@ -57,11 +67,12 @@ export default function ManualSolveCard({ defaultLanguage, connected }: { defaul
             {languages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </label>
-        <button className="primary-button" onClick={runSolve} disabled={loading || !connected}>
+        <button className="primary-button" onClick={runSolve} disabled={loading || !ready}>
           {loading ? "Solving & submitting…" : "Solve & submit now"}
         </button>
       </div>
       {!connected && <div className="notice error">Connect your LeetCode account first.</div>}
+      {!groqConnected && <div className="notice error">Add and verify your Groq API key above before solving.</div>}
       {message && <div className={`notice ${kind}`}>{message}</div>}
     </div>
   );
