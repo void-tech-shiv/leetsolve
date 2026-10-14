@@ -37,7 +37,7 @@ export default function ActivationForm({ storeUrl }: { storeUrl?: string | null 
       <div className="auth-heading">
         <span className="eyebrow">LEETSOLVE PRO</span>
         <h1>Activate your access</h1>
-        <p>Subscribe through Nexora for ₹59/month with AutoPay, or request a 7-day free trial. Then enter the activation key you receive.</p>
+        <p>Buy a 30-day LeetSolve access key from Nexora, or request a 7-day free trial. There is no AutoPay. Paste the key here once to activate your account.</p>
       </div>
 
       <label className="field">
@@ -60,9 +60,9 @@ export default function ActivationForm({ storeUrl }: { storeUrl?: string | null 
       </button>
 
       {storeUrl ? (
-        <p className="auth-switch">Need a key? <a href={storeUrl} target="_blank" rel="noreferrer">Subscribe for ₹59/month or request a 7-day trial ↗</a></p>
+        <p className="auth-switch">Need a key? <a href={storeUrl} target="_blank" rel="noreferrer">Buy 30-day access or request a 7-day trial ↗</a></p>
       ) : (
-        <p className="auth-switch">Get your subscription or free-trial key from Nexora.</p>
+        <p className="auth-switch">Get a 30-day access key or free-trial key from Nexora.</p>
       )}
     </form>
   );
