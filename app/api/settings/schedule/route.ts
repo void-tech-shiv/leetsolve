@@ -5,6 +5,7 @@ import { getUserSettings, updateUserSettings } from "@/lib/db";
 import { isValidTimezone } from "@/lib/schedule";
 import { ensureSchedulerRunning } from "@/lib/start-scheduler";
 import { hasActiveSubscription } from "@/lib/subscription";
+import { hasGroqApiKey } from "@/lib/user-groq";
 
 const schema = z.object({
   enabled: z.boolean(),
@@ -25,14 +26,19 @@ export async function GET() {
 
   try {
     const settings = await getUserSettings(userId);
-    const automationActive = await hasActiveSubscription(userId).catch(() => false);
-    if (settings.enabled && automationActive) {
+    const [automationActive, groqConnected] = await Promise.all([
+      hasActiveSubscription(userId).catch(() => false),
+      hasGroqApiKey(userId).catch(() => false),
+    ]);
+
+    if (settings.enabled && automationActive && groqConnected) {
       const scheduler = await ensureSchedulerRunning();
       settings.schedulerRunId = scheduler.runId;
-    } else if (!automationActive) {
+    } else {
       settings.schedulerRunId = null;
     }
-    return NextResponse.json({ ...settings, automationActive });
+
+    return NextResponse.json({ ...settings, automationActive, groqConnected });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
@@ -49,15 +55,24 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Invalid timezone." }, { status: 400 });
     }
 
+    const [automationActive, groqConnected] = await Promise.all([
+      hasActiveSubscription(userId).catch(() => false),
+      hasGroqApiKey(userId).catch(() => false),
+    ]);
+
+    if (parsed.data.enabled && automationActive && !groqConnected) {
+      return NextResponse.json({ error: "Add and verify your Groq API key before enabling daily automation." }, { status: 400 });
+    }
+
     const settings = await updateUserSettings(userId, parsed.data);
-    const automationActive = await hasActiveSubscription(userId).catch(() => false);
-    if (settings.enabled && automationActive) {
+    if (settings.enabled && automationActive && groqConnected) {
       const scheduler = await ensureSchedulerRunning();
       settings.schedulerRunId = scheduler.runId;
-    } else if (!automationActive) {
+    } else {
       settings.schedulerRunId = null;
     }
-    return NextResponse.json({ ...settings, automationActive });
+
+    return NextResponse.json({ ...settings, automationActive, groqConnected });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
