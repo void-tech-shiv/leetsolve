@@ -17,8 +17,16 @@ function submissionFailure(result: LeetCodeSubmissionResult) {
   ].filter(Boolean).join("\n");
 }
 
-export async function solveDaily(userId: string, language = process.env.DEFAULT_LANGUAGE || "java") {
-  await requireActiveSubscription(userId);
+export async function solveDaily(
+  userId: string,
+  language = process.env.DEFAULT_LANGUAGE || "java",
+  options: { requireSubscription?: boolean } = {},
+) {
+  // Scheduled/background automation is a paid feature. Manual solves explicitly
+  // opt out of this check in the /api/solve route.
+  if (options.requireSubscription !== false) {
+    await requireActiveSubscription(userId);
+  }
 
   const credentials = await getLeetCodeCredentials(userId);
   if (!credentials) {
