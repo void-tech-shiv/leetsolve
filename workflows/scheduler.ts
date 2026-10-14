@@ -6,6 +6,7 @@ async function schedulerTick() {
   const { getActiveUserSchedules, claimScheduledRun, releaseScheduledRun } = await import("../lib/db");
   const { touchSchedulerHeartbeat } = await import("../lib/scheduler-state");
   const { getLocalDateKey, isScheduleDue } = await import("../lib/schedule");
+  const { hasActiveSubscription } = await import("../lib/subscription");
   const { solveDaily } = await import("../lib/solver");
 
   await touchSchedulerHeartbeat();
@@ -16,6 +17,7 @@ async function schedulerTick() {
 
   for (const settings of settingsList) {
     if (!isScheduleDue(settings)) continue;
+    if (!(await hasActiveSubscription(settings.userId))) continue;
 
     const localDate = getLocalDateKey(settings.timezone);
     const claimed = await claimScheduledRun(settings.userId, localDate);
