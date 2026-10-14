@@ -2,6 +2,7 @@ import { generateSolution, repairSolution } from "./ai";
 import { getLeetCodeCredentials, saveSolution } from "./db";
 import { verifySolution } from "./judge";
 import { getDailyProblem, submitAndWait } from "./leetcode";
+import { requireActiveSubscription } from "./subscription";
 import type { LeetCodeSubmissionResult } from "./types";
 
 function submissionFailure(result: LeetCodeSubmissionResult) {
@@ -17,6 +18,8 @@ function submissionFailure(result: LeetCodeSubmissionResult) {
 }
 
 export async function solveDaily(userId: string, language = process.env.DEFAULT_LANGUAGE || "java") {
+  await requireActiveSubscription(userId);
+
   const credentials = await getLeetCodeCredentials(userId);
   if (!credentials) {
     throw new Error("Connect your LeetCode account before running the solver.");
