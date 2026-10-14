@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import CodeViewer from "@/components/CodeViewer";
+import GroqKeyCard from "@/components/GroqKeyCard";
 import LeetCodeStatsCards from "@/components/LeetCodeStatsCards";
 import ManualSolveCard from "@/components/ManualSolveCard";
 import SolveControls from "@/components/SolveControls";
 import { auth } from "@/lib/auth/server";
 import { getRecentSolutions, getTodaySolution, getUserSettings } from "@/lib/db";
 import { getSubscriptionStatus } from "@/lib/subscription";
+import { getGroqKeyStatus } from "@/lib/user-groq";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,7 @@ export default async function Home() {
   if (!session?.user) redirect("/auth/sign-in");
 
   const userId = session.user.id;
-  const [subscription, schedule] = await Promise.all([
+  const [subscription, schedule, groqStatus] = await Promise.all([
     getSubscriptionStatus(userId).catch(() => null),
     getUserSettings(userId).catch(() => ({
       userId,
@@ -37,6 +39,7 @@ export default async function Home() {
       lastRunLocalDate: null,
       schedulerRunId: null,
     })),
+    getGroqKeyStatus(userId).catch(() => ({ connected: false, verifiedAt: null })),
   ]);
 
   const automationActive = Boolean(subscription?.active);
@@ -72,8 +75,8 @@ export default async function Home() {
           <span className="pill">{automationActive ? "AI DAILY AUTO-SUBMIT" : "FREE MANUAL SOLVE · PRO AUTOMATION"}</span>
           <h1>Your daily coding dashboard,<br /><span>{automationActive ? "solved and submitted automatically." : "solve anytime, automate when you upgrade."}</span></h1>
           <p>{automationActive
-            ? "LeetSolve can solve on demand or run automatically at your saved time every day."
-            : "Sign in, connect LeetCode, view your real stats and use Solve & submit now for free. An activation key is required only for unattended daily automation."}</p>
+            ? "LeetSolve uses your own Groq API key to solve on demand or run automatically at your saved time every day."
+            : "Sign in, connect LeetCode, add your own Groq API key and use Solve & submit now for free. An activation key is required only for unattended daily automation."}</p>
           <div className="hero-actions">
             {today?.problem_url && <a className="primary-link" href={today.problem_url} target="_blank" rel="noreferrer">Open today’s problem ↗</a>}
             {automationActive ? (
@@ -145,17 +148,22 @@ export default async function Home() {
               <div className="empty-state">
                 <div className="empty-icon">⌁</div>
                 <h3>No LeetCode submission saved for today yet</h3>
-                <p>Connect your account and use “Solve & submit now”. Daily unattended scheduling is the only feature that needs an activation key.</p>
+                <p>Connect LeetCode, add your Groq API key and use “Solve & submit now”. Daily unattended scheduling is the only feature that needs an activation key.</p>
               </div>
             )}
           </article>
 
           <div id="manual-solve" className={!automationActive ? "free-solve-controls" : undefined}>
+            <GroqKeyCard
+              initialConnected={groqStatus.connected}
+              initialVerifiedAt={groqStatus.verifiedAt}
+            />
             <SolveControls defaultLanguage={language} automationActive={automationActive} />
             {!automationActive && (
               <ManualSolveCard
                 defaultLanguage={language}
                 connected={Boolean(schedule.leetcodeConnected)}
+                groqConnected={groqStatus.connected}
               />
             )}
           </div>
@@ -172,16 +180,21 @@ export default async function Home() {
                 Automatic scheduled runs need a valid key. Manual solving remains available. <a href="/activate">Activate automation →</a>
               </div>
             )}
+            {automationActive && !groqStatus.connected && (
+              <div className="notice error" style={{ marginBottom: 16 }}>
+                Add your Groq API key before enabling scheduled AI solving.
+              </div>
+            )}
             <div className="pipeline" style={!automationActive ? { opacity: 0.55 } : undefined}>
               <div className="pipe-item"><span>1</span><div><strong>Wait for your schedule</strong><small>Cloud workflow checks each active Pro user independently</small></div></div>
               <div className="pipe-line" />
               <div className="pipe-item"><span>2</span><div><strong>Fetch daily challenge</strong><small>Problem statement + required code signature</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>3</span><div><strong>Generate & verify</strong><small>AI + local retry loop</small></div></div>
+              <div className="pipe-item"><span>3</span><div><strong>Generate & verify</strong><small>Your Groq API key + local retry loop</small></div></div>
               <div className="pipe-line" />
               <div className="pipe-item"><span>4</span><div><strong>Submit to LeetCode</strong><small>Connected account session</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>5</span><div><strong>Repair if rejected</strong><small>Verdict feedback → AI → re-submit</small></div></div>
+              <div className="pipe-item"><span>5</span><div><strong>Repair if rejected</strong><small>Verdict feedback → your Groq AI → re-submit</small></div></div>
             </div>
           </article>
 
@@ -202,7 +215,7 @@ export default async function Home() {
 
       <footer>
         <span>LeetSolve</span>
-        <span>Dashboard + manual solve are free. Only unattended daily automation requires an active key.</span>
+        <span>Every AI solve uses the signed-in user’s own encrypted Groq API key. LeetSolve does not share a global Groq quota.</span>
       </footer>
     </main>
   );
