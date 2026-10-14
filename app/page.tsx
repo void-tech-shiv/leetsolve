@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import CodeViewer from "@/components/CodeViewer";
 import LeetCodeStatsCards from "@/components/LeetCodeStatsCards";
+import ManualSolveCard from "@/components/ManualSolveCard";
 import SolveControls from "@/components/SolveControls";
 import { auth } from "@/lib/auth/server";
 import { getRecentSolutions, getTodaySolution, getUserSettings } from "@/lib/db";
@@ -149,8 +150,14 @@ export default async function Home() {
             )}
           </article>
 
-          <div id="manual-solve">
+          <div id="manual-solve" className={!automationActive ? "free-solve-controls" : undefined}>
             <SolveControls defaultLanguage={language} automationActive={automationActive} />
+            {!automationActive && (
+              <ManualSolveCard
+                defaultLanguage={language}
+                connected={Boolean(schedule.leetcodeConnected)}
+              />
+            )}
           </div>
         </div>
 
