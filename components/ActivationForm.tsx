@@ -36,8 +36,8 @@ export default function ActivationForm({ storeUrl }: { storeUrl?: string | null 
     <form className="auth-form" onSubmit={submit}>
       <div className="auth-heading">
         <span className="eyebrow">LEETSOLVE PRO</span>
-        <h1>Activate your subscription</h1>
-        <p>Enter the activation code you received after purchasing LeetSolve. A new key unlocks 30 days by default.</p>
+        <h1>Activate your access</h1>
+        <p>Subscribe through Nexora for ₹59/month with AutoPay, or request a 7-day free trial. Then enter the activation key you receive.</p>
       </div>
 
       <label className="field">
@@ -49,7 +49,7 @@ export default function ActivationForm({ storeUrl }: { storeUrl?: string | null 
           spellCheck={false}
           required
           minLength={10}
-          placeholder="LEET-XXXX-XXXX-XXXX"
+          placeholder="LEET-XXXX-XXXX-XXXX-XXXX"
         />
       </label>
 
@@ -60,9 +60,9 @@ export default function ActivationForm({ storeUrl }: { storeUrl?: string | null 
       </button>
 
       {storeUrl ? (
-        <p className="auth-switch">Don’t have a key? <a href={storeUrl} target="_blank" rel="noreferrer">Buy 30-day access ↗</a></p>
+        <p className="auth-switch">Need a key? <a href={storeUrl} target="_blank" rel="noreferrer">Subscribe for ₹59/month or request a 7-day trial ↗</a></p>
       ) : (
-        <p className="auth-switch">Purchase a LeetSolve subscription from Shiv Tools Store to receive an activation key.</p>
+        <p className="auth-switch">Get your subscription or free-trial key from Nexora.</p>
       )}
     </form>
   );
