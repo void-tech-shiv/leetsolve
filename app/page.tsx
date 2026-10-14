@@ -23,7 +23,7 @@ export default async function Home() {
 
   const userId = session.user.id;
   const subscription = await getSubscriptionStatus(userId).catch(() => null);
-  if (!subscription?.active) redirect("/activate");
+  const automationActive = Boolean(subscription?.active);
 
   const schedule = await getUserSettings(userId).catch(() => ({
     userId,
@@ -60,8 +60,11 @@ export default async function Home() {
         </a>
         <div className="account-strip">
           <div className="top-status">
-            <span className="live-dot" /> Pro active · {subscription.daysRemaining} day{subscription.daysRemaining === 1 ? "" : "s"} left
+            <span className="live-dot" /> {automationActive
+              ? `Pro active · ${subscription?.daysRemaining || 0} day${subscription?.daysRemaining === 1 ? "" : "s"} left`
+              : "Free dashboard · Automation locked"}
           </div>
+          {!automationActive && <a className="account-link" href="/activate">Activate key</a>}
           <div className="user-meta">
             <span>{schedule.leetcodeUsername ? `@${schedule.leetcodeUsername}` : session.user.name || session.user.email || "Account"}</span>
             <a className="account-link" href="/auth/sign-out">Sign out</a>
@@ -71,12 +74,18 @@ export default async function Home() {
 
       <section className="hero-panel">
         <div className="hero-copy">
-          <span className="pill">AI DAILY AUTO-SUBMIT</span>
-          <h1>Your daily coding problem,<br /><span>solved and submitted automatically.</span></h1>
-          <p>LeetSolve fetches the daily challenge, generates code, checks it, submits it to your LeetCode account and repairs failed attempts when needed.</p>
+          <span className="pill">{automationActive ? "AI DAILY AUTO-SUBMIT" : "FREE DASHBOARD · PRO AUTOMATION"}</span>
+          <h1>Your daily coding dashboard,<br /><span>{automationActive ? "solved and submitted automatically." : "automation unlocks with an access key."}</span></h1>
+          <p>{automationActive
+            ? "LeetSolve fetches the daily challenge, generates code, checks it, submits it to your LeetCode account and repairs failed attempts when needed."
+            : "Sign in, connect your LeetCode account and view your real stats for free. Activate a 7-day trial or 30-day key when you want AI solving, submission and daily scheduling."}</p>
           <div className="hero-actions">
             {problem && <a className="primary-link" href={problem.link} target="_blank" rel="noreferrer">Open today’s problem ↗</a>}
-            <span className="subtle-label">{schedule.enabled ? `Daily run: ${schedule.time} · ${schedule.timezone}` : "Automatic schedule is paused"}</span>
+            {automationActive ? (
+              <span className="subtle-label">{schedule.enabled ? `Daily run: ${schedule.time} · ${schedule.timezone}` : "Automatic schedule is paused"}</span>
+            ) : (
+              <a className="primary-link" href="/activate">Unlock automation →</a>
+            )}
           </div>
         </div>
         <div className="hero-orbit" aria-hidden="true">
@@ -85,7 +94,7 @@ export default async function Home() {
           <div className="orbit-core">🔥</div>
           <span className="orbit-chip chip-ai">AI</span>
           <span className="orbit-chip chip-test">TEST</span>
-          <span className="orbit-chip chip-save">SUBMIT</span>
+          <span className="orbit-chip chip-save">{automationActive ? "SUBMIT" : "LOCKED"}</span>
         </div>
       </section>
 
@@ -116,7 +125,11 @@ export default async function Home() {
         </article>
         <article className="stat-card">
           <div className="stat-icon">⚙</div>
-          <div><span>Scheduled language</span><strong className="language-stat">{language}</strong><small>{schedule.time} · {schedule.timezone}</small></div>
+          <div>
+            <span>{automationActive ? "Scheduled language" : "Automation"}</span>
+            <strong className="language-stat">{automationActive ? language : "Locked"}</strong>
+            <small>{automationActive ? `${schedule.time} · ${schedule.timezone}` : "activate a key to unlock"}</small>
+          </div>
         </article>
       </section>
 
@@ -133,10 +146,10 @@ export default async function Home() {
 
             <div className="run-summary">
               <div className={`run-state ${today?.status === "accepted" ? "complete" : "pending"}`}>
-                <span>{today?.status === "accepted" ? "✓" : "○"}</span>
+                <span>{today?.status === "accepted" ? "✓" : automationActive ? "○" : "🔒"}</span>
                 <div>
-                  <strong>{today?.status === "accepted" ? "Accepted on LeetCode" : today ? "Submission finished" : "Waiting for today’s run"}</strong>
-                  <small>{today ? `Saved ${formatDate(today.challenge_date)}` : "Your saved schedule will trigger it automatically"}</small>
+                  <strong>{today?.status === "accepted" ? "Accepted on LeetCode" : today ? "Submission finished" : automationActive ? "Waiting for today’s run" : "Automation is locked"}</strong>
+                  <small>{today ? `Saved ${formatDate(today.challenge_date)}` : automationActive ? "Your saved schedule will trigger it automatically" : "Activate an access key to enable solving and submission"}</small>
                 </div>
               </div>
               <div className="meta-block"><span>Language</span><strong>{today?.language || language}</strong></div>
@@ -158,21 +171,29 @@ export default async function Home() {
               </>
             ) : (
               <div className="empty-state">
-                <div className="empty-icon">⌁</div>
-                <h3>No LeetCode submission saved for today yet</h3>
-                <p>Connect your account and wait for your scheduled time, or use “Solve & submit now”.</p>
+                <div className="empty-icon">{automationActive ? "⌁" : "🔒"}</div>
+                <h3>{automationActive ? "No LeetCode submission saved for today yet" : "Automation is a Pro feature"}</h3>
+                <p>{automationActive ? "Connect your account and wait for your scheduled time, or use “Solve & submit now”." : "Your dashboard and real LeetCode stats remain available. Activate a key to unlock AI solve, submit, repair and scheduling."}</p>
               </div>
             )}
           </article>
 
-          <SolveControls defaultLanguage={language} />
+          <SolveControls defaultLanguage={language} automationActive={automationActive} />
         </div>
 
         <aside className="side-column">
           <article className="panel automation-panel">
-            <div className="section-heading compact"><div><span className="eyebrow">PIPELINE</span><h2>Automation</h2></div><span className="healthy">Live</span></div>
-            <div className="pipeline">
-              <div className="pipe-item"><span>1</span><div><strong>Wait for your schedule</strong><small>Cloud workflow checks each user independently</small></div></div>
+            <div className="section-heading compact">
+              <div><span className="eyebrow">PIPELINE</span><h2>Automation</h2></div>
+              <span className={automationActive ? "healthy" : "muted"}>{automationActive ? "Live" : "Locked"}</span>
+            </div>
+            {!automationActive && (
+              <div className="notice error" style={{ marginBottom: 16 }}>
+                Activate a valid key to run this pipeline. <a href="/activate">Activate now →</a>
+              </div>
+            )}
+            <div className="pipeline" style={!automationActive ? { opacity: 0.55 } : undefined}>
+              <div className="pipe-item"><span>1</span><div><strong>Wait for your schedule</strong><small>Cloud workflow checks each active Pro user independently</small></div></div>
               <div className="pipe-line" />
               <div className="pipe-item"><span>2</span><div><strong>Fetch daily challenge</strong><small>Problem statement + required code signature</small></div></div>
               <div className="pipe-line" />
@@ -201,7 +222,7 @@ export default async function Home() {
 
       <footer>
         <span>LeetSolve</span>
-        <span>LeetCode credentials are encrypted per user and never returned to the browser after saving.</span>
+        <span>Dashboard access is free. AI solving, submission and scheduling require an active key.</span>
       </footer>
     </main>
   );
