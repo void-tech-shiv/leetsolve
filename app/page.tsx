@@ -56,13 +56,21 @@ export default async function Home() {
           <span className="brand-mark">L</span>
           <span>LeetSolve</span>
         </a>
+
+        <nav className="lc-nav" aria-label="Primary navigation">
+          <a href="#today">Problems</a>
+          <a href="#manual-solve">Solve</a>
+          <a href="#history">Submissions</a>
+          <a href={automationActive ? "#automation" : "/activate"}>Automation</a>
+        </nav>
+
         <div className="account-strip">
           <div className="top-status">
             <span className="live-dot" /> {automationActive
-              ? `Pro active · ${subscription?.daysRemaining || 0} day${subscription?.daysRemaining === 1 ? "" : "s"} left`
-              : "Free dashboard · Manual solve enabled · Automation locked"}
+              ? `Pro · ${subscription?.daysRemaining || 0} day${subscription?.daysRemaining === 1 ? "" : "s"} left`
+              : "Free · Manual solve enabled"}
           </div>
-          {!automationActive && <a className="account-link" href="/activate">Activate automation</a>}
+          {!automationActive && <a className="account-link" href="/activate">Upgrade</a>}
           <div className="user-meta">
             <span>{schedule.leetcodeUsername ? `@${schedule.leetcodeUsername}` : session.user.name || session.user.email || "Account"}</span>
             <a className="account-link" href="/auth/sign-out">Sign out</a>
@@ -72,18 +80,13 @@ export default async function Home() {
 
       <section className="hero-panel">
         <div className="hero-copy">
-          <span className="pill">{automationActive ? "AI DAILY AUTO-SUBMIT" : "FREE MANUAL SOLVE · PRO AUTOMATION"}</span>
-          <h1>Your daily coding dashboard,<br /><span>{automationActive ? "solved and submitted automatically." : "solve anytime, automate when you upgrade."}</span></h1>
-          <p>{automationActive
-            ? "LeetSolve uses your own Groq API key to solve on demand or run automatically at your saved time every day."
-            : "Sign in, connect LeetCode, add your own Groq API key and use Solve & submit now for free. An activation key is required only for unattended daily automation."}</p>
+          <span className="pill">DAILY CHALLENGE</span>
+          <h1>Practice. Submit.<br /><span>Keep your streak alive.</span></h1>
+          <p>Connect your LeetCode account and Groq API key, then solve today’s challenge from one dashboard. Manual solving is free; unattended daily automation unlocks with an activation key.</p>
           <div className="hero-actions">
             {today?.problem_url && <a className="primary-link" href={today.problem_url} target="_blank" rel="noreferrer">Open today’s problem ↗</a>}
-            {automationActive ? (
-              <span className="subtle-label">{schedule.enabled ? `Daily run: ${schedule.time} · ${schedule.timezone}` : "Automatic schedule is paused"}</span>
-            ) : (
-              <a className="primary-link" href="#manual-solve">Solve manually for free ↓</a>
-            )}
+            <a className="account-link" href="#manual-solve">Solve & submit</a>
+            {automationActive && <span className="subtle-label">Next schedule: {schedule.time} · {schedule.timezone}</span>}
           </div>
         </div>
         <div className="hero-orbit" aria-hidden="true">
@@ -91,7 +94,7 @@ export default async function Home() {
           <div className="orbit-ring ring-two" />
           <div className="orbit-core">🔥</div>
           <span className="orbit-chip chip-ai">AI</span>
-          <span className="orbit-chip chip-test">TEST</span>
+          <span className="orbit-chip chip-test">RUN</span>
           <span className="orbit-chip chip-save">SUBMIT</span>
         </div>
       </section>
@@ -110,7 +113,7 @@ export default async function Home() {
 
       <section className="content-grid">
         <div className="main-column">
-          <article className="panel today-panel">
+          <article className="panel today-panel" id="today">
             <div className="section-heading">
               <div>
                 <span className="eyebrow">TODAY</span>
@@ -128,14 +131,14 @@ export default async function Home() {
                 </div>
               </div>
               <div className="meta-block"><span>Language</span><strong>{today?.language || language}</strong></div>
-              <div className="meta-block"><span>LeetCode verdict</span><strong>{today?.submission_status || "Not submitted yet"}</strong></div>
+              <div className="meta-block"><span>Verdict</span><strong>{today?.submission_status || "Not submitted yet"}</strong></div>
             </div>
 
             {today?.code ? (
               <>
                 <CodeViewer code={today.code} />
                 <div className="explanation-grid">
-                  <div><span className="eyebrow">EXPLANATION</span><p>{today.explanation}</p></div>
+                  <div><span className="eyebrow">SOLUTION NOTES</span><p>{today.explanation}</p></div>
                   <div className="complexity-box">
                     <div><span>Time</span><strong>{today.time_complexity || "—"}</strong></div>
                     <div><span>Space</span><strong>{today.space_complexity || "—"}</strong></div>
@@ -147,8 +150,8 @@ export default async function Home() {
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">⌁</div>
-                <h3>No LeetCode submission saved for today yet</h3>
-                <p>Connect LeetCode, add your Groq API key and use “Solve & submit now”. Daily unattended scheduling is the only feature that needs an activation key.</p>
+                <h3>No submission for today yet</h3>
+                <p>Connect LeetCode, add your Groq API key and use “Solve & submit now”. Scheduled automation is the only feature that needs an activation key.</p>
               </div>
             )}
           </article>
@@ -170,14 +173,14 @@ export default async function Home() {
         </div>
 
         <aside className="side-column">
-          <article className="panel automation-panel">
+          <article className="panel automation-panel" id="automation">
             <div className="section-heading compact">
-              <div><span className="eyebrow">PIPELINE</span><h2>Daily automation</h2></div>
-              <span className={automationActive ? "healthy" : "muted"}>{automationActive ? "Live" : "Locked"}</span>
+              <div><span className="eyebrow">AUTOMATION</span><h2>Daily auto-submit</h2></div>
+              <span className={automationActive ? "healthy" : "muted"}>{automationActive ? "Active" : "Locked"}</span>
             </div>
             {!automationActive && (
               <div className="notice error" style={{ marginBottom: 16 }}>
-                Automatic scheduled runs need a valid key. Manual solving remains available. <a href="/activate">Activate automation →</a>
+                Scheduled runs need an activation key. Manual solve remains free. <a href="/activate">Upgrade →</a>
               </div>
             )}
             {automationActive && !groqStatus.connected && (
@@ -186,20 +189,20 @@ export default async function Home() {
               </div>
             )}
             <div className="pipeline" style={!automationActive ? { opacity: 0.55 } : undefined}>
-              <div className="pipe-item"><span>1</span><div><strong>Wait for your schedule</strong><small>Cloud workflow checks each active Pro user independently</small></div></div>
+              <div className="pipe-item"><span>1</span><div><strong>Wait for schedule</strong><small>Checks your saved time and timezone</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>2</span><div><strong>Fetch daily challenge</strong><small>Problem statement + required code signature</small></div></div>
+              <div className="pipe-item"><span>2</span><div><strong>Fetch challenge</strong><small>Problem statement + code signature</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>3</span><div><strong>Generate & verify</strong><small>Your Groq API key + local retry loop</small></div></div>
+              <div className="pipe-item"><span>3</span><div><strong>Generate & verify</strong><small>Your Groq API key + retry loop</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>4</span><div><strong>Submit to LeetCode</strong><small>Connected account session</small></div></div>
+              <div className="pipe-item"><span>4</span><div><strong>Submit</strong><small>Uses your connected LeetCode account</small></div></div>
               <div className="pipe-line" />
-              <div className="pipe-item"><span>5</span><div><strong>Repair if rejected</strong><small>Verdict feedback → your Groq AI → re-submit</small></div></div>
+              <div className="pipe-item"><span>5</span><div><strong>Repair if rejected</strong><small>Verdict feedback → AI → re-submit</small></div></div>
             </div>
           </article>
 
-          <article className="panel history-panel">
-            <div className="section-heading compact"><div><span className="eyebrow">RECENT</span><h2>Your history</h2></div></div>
+          <article className="panel history-panel" id="history">
+            <div className="section-heading compact"><div><span className="eyebrow">SUBMISSIONS</span><h2>Recent activity</h2></div></div>
             <div className="history-list">
               {recent.length === 0 ? <p className="muted">No previous submissions yet.</p> : recent.map((item) => (
                 <a className="history-row" href={item.problem_url || `https://leetcode.com/problems/${item.slug}/`} target="_blank" rel="noreferrer" key={String(item.id)}>
@@ -215,7 +218,7 @@ export default async function Home() {
 
       <footer>
         <span>LeetSolve</span>
-        <span>Every AI solve uses the signed-in user’s own encrypted Groq API key. LeetSolve does not share a global Groq quota.</span>
+        <span>Every AI solve uses the signed-in user’s own encrypted Groq API key.</span>
       </footer>
     </main>
   );
