@@ -1,0 +1,645 @@
+/* Split coding workspace inspired by the familiar online judge layout.
+   Brand, copy and functionality remain LeetSolve-specific. */
+
+:root {
+  --judge-bg: #0f0f0f;
+  --judge-top: #1a1a1a;
+  --judge-pane: #1e1e1e;
+  --judge-pane-2: #262626;
+  --judge-pane-3: #2d2d2d;
+  --judge-line: #333333;
+  --judge-line-soft: #2b2b2b;
+  --judge-text: #efefef;
+  --judge-muted: #9b9b9b;
+  --judge-orange: #ffa116;
+  --judge-green: #2cbb5d;
+}
+
+html,
+body {
+  background: var(--judge-bg) !important;
+}
+
+body {
+  margin: 0;
+  color: var(--judge-text);
+  overflow-x: hidden;
+}
+
+.lc-app-shell {
+  min-height: 100vh;
+  background: var(--judge-bg);
+}
+
+.lc-main-topbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  width: 100% !important;
+  min-height: 52px !important;
+  height: 52px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #242424 !important;
+  border-radius: 0 !important;
+  background: #1a1a1a !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.lc-main-topbar .brand {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
+.lc-main-topbar .brand-mark {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.lc-main-topbar .lc-nav {
+  display: flex;
+  align-items: stretch;
+  height: 52px;
+  gap: 0;
+  margin-right: auto;
+}
+
+.lc-main-topbar .lc-nav a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 0;
+  color: #a5a5a5;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+}
+
+.lc-main-topbar .lc-nav a:first-child,
+.lc-main-topbar .lc-nav a:hover {
+  color: #f3f3f3;
+  background: #202020;
+  border-bottom-color: var(--judge-orange);
+}
+
+.lc-main-topbar .account-strip {
+  flex: 0 0 auto;
+  gap: 8px !important;
+}
+
+.lc-main-topbar .top-status {
+  font-size: 11px !important;
+}
+
+.lc-main-topbar .account-link {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px !important;
+}
+
+.lc-workspace {
+  height: calc(100vh - 52px);
+  min-height: 650px;
+  display: grid;
+  grid-template-columns: minmax(360px, 43%) minmax(500px, 57%);
+  gap: 6px;
+  padding: 6px;
+  background: #0f0f0f;
+}
+
+.lc-pane {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #292929;
+  border-radius: 7px;
+  background: var(--judge-pane);
+  overflow: hidden;
+}
+
+.lc-problem-pane,
+.lc-editor-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.lc-pane-tabs,
+.lc-console-tabs {
+  flex: 0 0 auto;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border-bottom: 1px solid #303030;
+  background: #202020;
+}
+
+.lc-pane-tabs > span,
+.lc-pane-tabs > a,
+.lc-console-tabs > span {
+  position: relative;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  color: #9c9c9c;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.lc-pane-tabs > span.active,
+.lc-pane-tabs > a:hover,
+.lc-console-tabs > span.active {
+  color: #f2f2f2;
+}
+
+.lc-pane-tabs > span.active::after,
+.lc-console-tabs > span.active::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--judge-orange);
+}
+
+.lc-pane-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px 26px 30px;
+  scrollbar-color: #444 transparent;
+}
+
+.lc-problem-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.lc-breadcrumb {
+  margin-bottom: 8px;
+  color: #777;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.lc-problem-heading h1 {
+  margin: 0;
+  color: #f5f5f5;
+  font-size: clamp(22px, 2.3vw, 30px);
+  line-height: 1.28;
+  letter-spacing: -.025em;
+}
+
+.lc-problem-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.lc-secondary-action,
+.lc-verdict-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid #393939;
+  background: #292929;
+  color: #bdbdbd;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.lc-secondary-action:hover {
+  background: #313131;
+  color: #fff;
+}
+
+.lc-verdict-pill.accepted {
+  color: #66d98a;
+  border-color: rgba(44,187,93,.25);
+  background: rgba(44,187,93,.08);
+}
+
+.lc-verdict-pill.pending {
+  color: #aaa;
+}
+
+.lc-problem-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 22px 0 26px;
+}
+
+.lc-problem-summary > div,
+.lc-complexity-row > div {
+  display: grid;
+  gap: 5px;
+  padding: 11px 12px;
+  border: 1px solid #303030;
+  border-radius: 6px;
+  background: #242424;
+}
+
+.lc-problem-summary span,
+.lc-complexity-row span {
+  color: #7f7f7f;
+  font-size: 10px;
+}
+
+.lc-problem-summary strong,
+.lc-complexity-row strong {
+  color: #dedede;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.lc-description-section,
+.lc-account-section,
+.lc-submissions-section {
+  padding-top: 22px;
+  margin-top: 22px;
+  border-top: 1px solid #2d2d2d;
+}
+
+.lc-description-section h3,
+.lc-section-header h3 {
+  margin: 0;
+  color: #ececec;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.lc-description-section p {
+  margin: 14px 0 0;
+  color: #c6c6c6;
+  font-size: 13px;
+  line-height: 1.78;
+  white-space: pre-line;
+}
+
+.lc-complexity-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.lc-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.lc-section-header > span {
+  color: #777;
+  font-size: 10px;
+}
+
+.lc-account-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lc-account-stats .stat-card {
+  min-height: 80px !important;
+  padding: 12px !important;
+}
+
+.lc-account-stats .stat-icon {
+  width: 30px !important;
+  height: 30px !important;
+  font-size: 13px;
+}
+
+.lc-account-stats .stat-card strong {
+  font-size: 20px !important;
+}
+
+.lc-account-stats .stat-card .language-stat {
+  font-size: 15px !important;
+}
+
+.lc-history-list .history-row {
+  min-height: 54px;
+  padding: 10px 4px !important;
+}
+
+.lc-editor-topbar {
+  min-height: 42px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #303030;
+  background: #202020;
+}
+
+.lc-editor-tabs {
+  border-bottom: 0;
+  background: transparent;
+}
+
+.lc-editor-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-right: 12px;
+}
+
+.lc-editor-meta span {
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: #2a2a2a;
+  color: #9f9f9f;
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
+.lc-editor-body {
+  flex: 1 1 60%;
+  min-height: 290px;
+  overflow: hidden;
+  background: #151515;
+  border-bottom: 6px solid #0f0f0f;
+}
+
+.lc-editor-body .code-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #151515 !important;
+}
+
+.lc-editor-body .code-toolbar {
+  min-height: 38px;
+  flex: 0 0 auto;
+  background: #1e1e1e !important;
+}
+
+.lc-editor-body pre {
+  flex: 1 1 auto;
+  max-height: none !important;
+  overflow: auto;
+  padding: 18px 20px !important;
+  background: #151515;
+  color: #d7d7d7 !important;
+  font-size: 12px !important;
+  line-height: 1.7 !important;
+}
+
+.lc-empty-editor {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: #7d7d7d;
+  text-align: center;
+}
+
+.lc-empty-editor div {
+  color: #6d6d6d;
+  font: 600 28px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.lc-empty-editor strong {
+  color: #bcbcbc;
+  font-size: 13px;
+}
+
+.lc-empty-editor span {
+  font-size: 11px;
+}
+
+.lc-console {
+  flex: 0 0 auto;
+  max-height: 310px;
+  overflow: auto;
+  background: #1e1e1e;
+}
+
+.lc-console-tabs {
+  min-height: 38px;
+  height: 38px;
+}
+
+.lc-console-tabs > span {
+  height: 38px;
+}
+
+.lc-console > .controls-card {
+  margin: 0 !important;
+  padding: 14px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #1e1e1e !important;
+}
+
+.lc-console .eyebrow {
+  display: none;
+}
+
+.lc-console .controls-card h3 {
+  margin-top: 0;
+  font-size: 14px !important;
+}
+
+.lc-console .controls-card p {
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.lc-console .controls-row {
+  align-items: center;
+}
+
+.lc-console .primary-button {
+  background: var(--judge-green) !important;
+  border-color: #269f50 !important;
+  color: #fff !important;
+  min-width: 140px;
+}
+
+.lc-console .field select {
+  min-width: 130px;
+}
+
+.lc-settings-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(300px, .65fr);
+  gap: 10px;
+  width: min(1320px, calc(100% - 12px));
+  margin: 10px auto 0;
+  align-items: start;
+}
+
+.lc-settings-main,
+.lc-settings-side {
+  display: grid;
+  gap: 10px;
+}
+
+.lc-settings-area .controls-card,
+.lc-settings-area .panel {
+  background: #1e1e1e !important;
+  border-color: #303030 !important;
+  border-radius: 7px !important;
+  padding: 16px !important;
+}
+
+.lc-settings-controls > .controls-card:last-child {
+  display: none !important;
+}
+
+.lc-settings-area .eyebrow {
+  color: #888 !important;
+}
+
+.lc-settings-area .section-heading h2,
+.lc-settings-area .controls-card h3 {
+  color: #ededed !important;
+}
+
+.lc-settings-area .primary-button {
+  background: var(--judge-orange) !important;
+  border-color: #e18e00 !important;
+  color: #171717 !important;
+}
+
+.lc-settings-area .secondary-button,
+.lc-settings-area .account-link {
+  background: #292929 !important;
+}
+
+.lc-settings-area .field input,
+.lc-settings-area .field select {
+  background: #252525 !important;
+}
+
+.lc-footer {
+  width: min(1320px, calc(100% - 12px));
+  margin: 18px auto 0;
+  padding: 18px 2px 28px;
+  border-top: 1px solid #292929;
+}
+
+@media (max-width: 1100px) {
+  .lc-workspace {
+    grid-template-columns: minmax(320px, 46%) minmax(430px, 54%);
+  }
+
+  .lc-main-topbar .top-status {
+    display: none !important;
+  }
+
+  .lc-account-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .lc-main-topbar .lc-nav {
+    display: none;
+  }
+
+  .lc-workspace {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 1fr;
+    padding: 6px;
+  }
+
+  .lc-problem-pane,
+  .lc-editor-pane {
+    min-height: 620px;
+  }
+
+  .lc-pane-scroll {
+    max-height: 620px;
+  }
+
+  .lc-editor-body {
+    min-height: 430px;
+  }
+
+  .lc-settings-area {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .lc-main-topbar {
+    padding: 0 8px !important;
+    gap: 8px !important;
+  }
+
+  .lc-main-topbar .brand > span:last-child {
+    display: none;
+  }
+
+  .lc-main-topbar .user-meta > span,
+  .lc-main-topbar .account-strip > .account-link[href="/activate"] {
+    display: none;
+  }
+
+  .lc-workspace {
+    gap: 6px;
+    padding: 6px 0;
+  }
+
+  .lc-pane {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+
+  .lc-pane-scroll {
+    padding: 18px 16px 24px;
+  }
+
+  .lc-problem-summary,
+  .lc-complexity-row,
+  .lc-account-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .lc-console {
+    max-height: none;
+  }
+
+  .lc-console .controls-row,
+  .lc-settings-area .controls-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lc-console .primary-button,
+  .lc-settings-area .primary-button,
+  .lc-settings-area .secondary-button {
+    width: 100%;
+  }
+
+  .lc-settings-area,
+  .lc-footer {
+    width: 100%;
+  }
+}
