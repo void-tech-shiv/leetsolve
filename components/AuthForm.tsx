@@ -1,13 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
 
 type Mode = "sign-in" | "sign-up";
 
 export default function AuthForm({ mode }: { mode: Mode }) {
-  const router = useRouter();
   const registering = mode === "sign-up";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -26,11 +24,12 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         : await authClient.signIn.email({ email, password });
 
       if (result.error) throw new Error(result.error.message || "Authentication failed.");
-      router.push("/");
-      router.refresh();
+
+      // One full navigation is faster and also guarantees the fresh auth cookie
+      // is available to the server-rendered dashboard immediately.
+      window.location.replace("/");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Authentication failed.");
-    } finally {
       setLoading(false);
     }
   }
@@ -40,7 +39,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       <div className="auth-heading">
         <span className="eyebrow">{registering ? "CREATE ACCOUNT" : "WELCOME BACK"}</span>
         <h1>{registering ? "Join LeetSolve" : "Sign in"}</h1>
-        <p>{registering ? "Create your account, then choose your own coding schedule." : "Continue to your personal LeetSolve dashboard."}</p>
+        <p>{registering ? "Create your account, then connect your coding profile." : "Continue to your personal LeetSolve dashboard."}</p>
       </div>
 
       {registering && (
@@ -63,7 +62,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       {error && <div className="notice error">{error}</div>}
 
       <button className="primary-button auth-submit" type="submit" disabled={loading}>
-        {loading ? "Please wait…" : registering ? "Create account" : "Sign in"}
+        {loading ? "Signing you in…" : registering ? "Create account" : "Sign in"}
       </button>
 
       <p className="auth-switch">
