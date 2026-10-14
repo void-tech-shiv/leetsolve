@@ -48,6 +48,18 @@
   cursor: not-allowed;
 }
 
+/* Brand emblem: use the same mark as the browser favicon everywhere the old L tile appeared. */
+.brand-mark {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 0 !important;
+  background: url('/icon.svg') center / contain no-repeat !important;
+  box-shadow: none !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  overflow: hidden;
+}
+
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -140,4 +152,5 @@
   .auth-brand { top: 18px; left: 18px; }
   .auth-panel { padding: 20px; }
   .auth-heading h1 { font-size: 32px; }
+  .brand-mark { width: 36px !important; height: 36px !important; }
 }
