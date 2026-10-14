@@ -2,6 +2,7 @@ import "./globals.css";
 import "./additions.css";
 import "./premium.css";
 import "./leetcode-theme.css";
+import "./leetcode-workspace.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
