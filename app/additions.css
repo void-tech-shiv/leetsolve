@@ -118,11 +118,15 @@
   margin-bottom: 0;
 }
 
-/* In free mode the legacy controls still provide the account connection card
-   and the locked automation card. Hide only its old upgrade card and old
-   locked manual card; the dedicated free manual card is rendered after it. */
-.free-solve-controls > .controls-card:first-child,
-.free-solve-controls > .controls-card:nth-child(4) {
+/* Free dashboard child order:
+   1 Groq key card (keep)
+   2 legacy upgrade banner (hide)
+   3 LeetCode connection (keep)
+   4 automation settings (keep, locked until activation)
+   5 legacy locked manual card (hide)
+   6 dedicated free manual solve card (keep) */
+.free-solve-controls > .controls-card:nth-child(2),
+.free-solve-controls > .controls-card:nth-child(5) {
   display: none;
 }
 
