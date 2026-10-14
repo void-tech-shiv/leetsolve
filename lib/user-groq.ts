@@ -40,6 +40,13 @@ export async function verifyGroqApiKey(apiKey: string) {
     throw new Error(`Groq verification failed (${response.status})${body ? `: ${body.slice(0, 160)}` : ""}`);
   }
 
+  const payload = await response.json().catch(() => ({}));
+  const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+  const models = Array.isArray(payload?.data) ? payload.data : [];
+  if (models.length > 0 && !models.some((item: { id?: string }) => item?.id === model)) {
+    throw new Error(`Your Groq key is valid, but it does not currently have access to the configured model: ${model}.`);
+  }
+
   return true;
 }
 
