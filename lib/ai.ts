@@ -9,6 +9,19 @@ const solutionSchema = z.object({
   spaceComplexity: z.string().min(1),
 });
 
+const groqSolutionJsonSchema = {
+  type: "object",
+  properties: {
+    language: { type: "string" },
+    code: { type: "string" },
+    explanation: { type: "string" },
+    timeComplexity: { type: "string" },
+    spaceComplexity: { type: "string" },
+  },
+  required: ["language", "code", "explanation", "timeComplexity", "spaceComplexity"],
+  additionalProperties: false,
+} as const;
+
 function stripFences(value: string) {
   return value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
 }
@@ -17,38 +30,79 @@ async function groqJson(prompt: string, apiKey: string) {
   if (!apiKey) throw new Error("Your Groq API key is required.");
   const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: "You are a competitive-programming assistant. Return valid JSON only." },
-        { role: "user", content: prompt },
-      ],
-    }),
-  });
+  let lastError = "";
 
-  if (!response.ok) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.1,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "leetcode_solution",
+            strict: true,
+            schema: groqSolutionJsonSchema,
+          },
+        },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a competitive-programming assistant. Return only a JSON object that exactly matches the required schema. Put source code in the code string and do not use Markdown fences.",
+          },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+
+    if (response.ok) {
+      const payload = await response.json();
+      const text = payload?.choices?.[0]?.message?.content || "";
+      if (!text) throw new Error("Groq returned an empty response.");
+      return text;
+    }
+
     const body = await response.text();
+    lastError = body;
+
     if (response.status === 401 || response.status === 403) {
       throw new Error("Your Groq API key was rejected. Update it in LeetSolve and try again.");
     }
     if (response.status === 429) {
       throw new Error("Your Groq account hit its rate limit. Wait or use another Groq API key.");
     }
+
+    const retryableJsonFailure =
+      response.status === 400 &&
+      (body.includes("json_validate_failed") || body.toLowerCase().includes("failed to validate json"));
+    const retryableServerFailure = response.status >= 500;
+
+    if ((retryableJsonFailure || retryableServerFailure) && attempt < 3) {
+      continue;
+    }
+
     throw new Error(`Groq request failed (${response.status}): ${body.slice(0, 240)}`);
   }
 
-  const payload = await response.json();
-  const text = payload?.choices?.[0]?.message?.content || "";
-  if (!text) throw new Error("Groq returned an empty response.");
-  return text;
+  throw new Error(
+    `Groq could not generate a valid structured solution after 3 attempts${
+      lastError ? `: ${lastError.slice(0, 180)}` : "."
+    }`,
+  );
+}
+
+function parseGeneratedSolution(raw: string) {
+  try {
+    return solutionSchema.parse(JSON.parse(stripFences(raw)));
+  } catch {
+    throw new Error("Groq returned a malformed solution. Please try again.");
+  }
 }
 
 export async function generateSolution(
@@ -57,12 +111,14 @@ export async function generateSolution(
   apiKey: string,
 ): Promise<GeneratedSolution> {
   const preferredSnippet = problem.codeSnippets?.find(
-    (snippet) => snippet.langSlug.toLowerCase() === language.toLowerCase() || snippet.lang.toLowerCase() === language.toLowerCase(),
+    (snippet) =>
+      snippet.langSlug.toLowerCase() === language.toLowerCase() ||
+      snippet.lang.toLowerCase() === language.toLowerCase(),
   );
 
-  const prompt = `Problem:\nTitle: ${problem.title}\nDifficulty: ${problem.difficulty}\nURL: ${problem.link}\n\nStatement:\n${problem.content || "Problem statement unavailable. Use the exact known problem identified by title/slug."}\n\nRequired starter/signature when available:\n${preferredSnippet?.code || "Use the standard LeetCode signature for this problem."}\n\nGenerate a high-quality ${language} solution for this exact problem. Respect the required signature, constraints, and edge cases. Return JSON only with keys: language, code, explanation, timeComplexity, spaceComplexity. Do not claim it was accepted.`;
+  const prompt = `Problem:\nTitle: ${problem.title}\nDifficulty: ${problem.difficulty}\nURL: ${problem.link}\n\nStatement:\n${problem.content || "Problem statement unavailable. Use the exact known problem identified by title/slug."}\n\nRequired starter/signature when available:\n${preferredSnippet?.code || "Use the standard LeetCode signature for this problem."}\n\nGenerate a high-quality ${language} solution for this exact problem. Respect the required signature, constraints, and edge cases. Fill every field in the required JSON schema. Do not claim it was accepted.`;
 
-  const parsed = solutionSchema.parse(JSON.parse(stripFences(await groqJson(prompt, apiKey))));
+  const parsed = parseGeneratedSolution(await groqJson(prompt, apiKey));
   return { ...parsed, language };
 }
 
@@ -73,7 +129,7 @@ export async function repairSolution(
   failure: string,
   apiKey: string,
 ): Promise<GeneratedSolution> {
-  const prompt = `Fix this ${language} solution for the problem ${problem.title}.\n\nProblem statement:\n${problem.content || problem.titleSlug}\n\nPrevious code:\n${previous.code}\n\nVerification/compile failure:\n${failure}\n\nReturn JSON only with keys: language, code, explanation, timeComplexity, spaceComplexity. Preserve the exact LeetCode function/class signature.`;
-  const parsed = solutionSchema.parse(JSON.parse(stripFences(await groqJson(prompt, apiKey))));
+  const prompt = `Fix this ${language} solution for the problem ${problem.title}.\n\nProblem statement:\n${problem.content || problem.titleSlug}\n\nPrevious code:\n${previous.code}\n\nVerification/compile failure:\n${failure}\n\nFill every field in the required JSON schema. Preserve the exact LeetCode function/class signature.`;
+  const parsed = parseGeneratedSolution(await groqJson(prompt, apiKey));
   return { ...parsed, language };
 }
