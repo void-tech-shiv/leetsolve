@@ -1,5 +1,8 @@
 import type { DailyProblem, GeneratedSolution } from "./types";
 
+const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const FALLBACK_MODEL = "llama-3.3-70b-versatile";
+
 function cleanGeneratedCode(value: string) {
   const text = value.trim();
   if (!text) throw new Error("Groq returned an empty solution.");
@@ -12,64 +15,151 @@ function cleanGeneratedCode(value: string) {
   return text;
 }
 
+function systemInstruction() {
+  return "You are a competitive-programming expert. Return ONLY the complete source code that should be submitted to LeetCode. Do not return JSON. Do not explain the answer. Do not use Markdown fences or any text before or after the code.";
+}
+
+function extractResponsesText(payload: any) {
+  if (typeof payload?.output_text === "string" && payload.output_text.trim()) {
+    return payload.output_text.trim();
+  }
+
+  const output = Array.isArray(payload?.output) ? payload.output : [];
+  for (const item of output) {
+    const content = Array.isArray(item?.content) ? item.content : [];
+    for (const part of content) {
+      if (part?.type === "output_text" && typeof part?.text === "string" && part.text.trim()) {
+        return part.text.trim();
+      }
+    }
+  }
+
+  return "";
+}
+
+function extractChatText(payload: any) {
+  const text = payload?.choices?.[0]?.message?.content;
+  return typeof text === "string" ? text.trim() : "";
+}
+
+function providerError(status: number, body: string) {
+  if (status === 401 || status === 403) {
+    return new Error("Your Groq API key was rejected. Update it in LeetSolve and try again.");
+  }
+  if (status === 429) {
+    return new Error("Your Groq account hit its rate limit. Wait a moment and try again.");
+  }
+  return new Error(`Groq request failed (${status}): ${body.slice(0, 240)}`);
+}
+
+async function groqResponses(prompt: string, apiKey: string, model: string) {
+  const response = await fetch("https://api.groq.com/openai/v1/responses", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      instructions: systemInstruction(),
+      input: prompt,
+      reasoning: { effort: "low" },
+    }),
+  });
+
+  const body = await response.text();
+  if (!response.ok) throw providerError(response.status, body);
+
+  let payload: any;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    throw new Error("Groq returned an unreadable response.");
+  }
+
+  return extractResponsesText(payload);
+}
+
+async function groqChat(prompt: string, apiKey: string, model: string) {
+  const isGptOss = model.startsWith("openai/gpt-oss-");
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.1,
+      ...(isGptOss
+        ? {
+            reasoning_effort: "low",
+            reasoning_format: "hidden",
+          }
+        : {}),
+      messages: [
+        { role: "system", content: systemInstruction() },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+
+  const body = await response.text();
+  if (!response.ok) throw providerError(response.status, body);
+
+  let payload: any;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    throw new Error("Groq returned an unreadable response.");
+  }
+
+  return extractChatText(payload);
+}
+
 async function groqCode(prompt: string, apiKey: string) {
   if (!apiKey) throw new Error("Your Groq API key is required.");
-  const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+
+  const configuredModel = process.env.GROQ_MODEL || DEFAULT_MODEL;
+  const fallbackModel = process.env.GROQ_FALLBACK_MODEL || FALLBACK_MODEL;
+  const attempts: Array<{ model: string; mode: "responses" | "chat" }> = [];
+
+  if (configuredModel.startsWith("openai/gpt-oss-")) {
+    // Groq's Responses API is the most reliable path for GPT-OSS final output.
+    attempts.push({ model: configuredModel, mode: "responses" });
+    // Keep Chat Completions as a secondary GPT-OSS path with reasoning hidden.
+    attempts.push({ model: configuredModel, mode: "chat" });
+  } else {
+    attempts.push({ model: configuredModel, mode: "chat" });
+  }
+
+  if (!attempts.some((attempt) => attempt.model === fallbackModel)) {
+    attempts.push({ model: fallbackModel, mode: "chat" });
+  }
+
   let lastError = "";
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.1,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a competitive-programming expert. Return ONLY the complete source code that should be submitted to LeetCode. Do not return JSON. Do not explain the answer. Do not use Markdown fences or any text before or after the code.",
-          },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+  for (const attempt of attempts) {
+    try {
+      const text =
+        attempt.mode === "responses"
+          ? await groqResponses(prompt, apiKey, attempt.model)
+          : await groqChat(prompt, apiKey, attempt.model);
 
-    if (response.ok) {
-      const payload = await response.json();
-      const text = payload?.choices?.[0]?.message?.content || "";
       if (text.trim()) return cleanGeneratedCode(text);
+      lastError = `${attempt.model} returned an empty response.`;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
 
-      lastError = "Groq returned an empty response.";
-      if (attempt < 3) continue;
-      throw new Error(lastError);
+      // Bad/expired keys cannot be fixed by changing model or endpoint.
+      if (message.includes("API key was rejected")) throw error;
+
+      lastError = message;
     }
-
-    const body = await response.text();
-    lastError = body;
-
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("Your Groq API key was rejected. Update it in LeetSolve and try again.");
-    }
-    if (response.status === 429) {
-      throw new Error("Your Groq account hit its rate limit. Wait or use another Groq API key.");
-    }
-
-    // Transient provider failures are safe to retry. We intentionally do not
-    // use Groq JSON/structured-output mode here because code containing quotes,
-    // backslashes and newlines can cause Groq's server-side JSON validator to
-    // reject an otherwise usable generated solution with json_validate_failed.
-    const retryable = response.status === 408 || response.status >= 500;
-    if (retryable && attempt < 3) continue;
-
-    throw new Error(`Groq request failed (${response.status}): ${body.slice(0, 240)}`);
   }
 
   throw new Error(
-    `Groq could not generate a solution after 3 attempts${lastError ? `: ${lastError.slice(0, 180)}` : "."}`,
+    `Groq could not generate visible source code${lastError ? `: ${lastError.slice(0, 220)}` : "."}`,
   );
 }
 
